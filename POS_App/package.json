@@ -1,7 +1,7 @@
 {
-  "name": "waiter-pos",
+  "name": "farrukh",
   "version": "1.0.0",
-  "description": "An Electron application with React",
+  "description": "FARRUKH Restaurant POS",
   "main": "./out/main/index.js",
   "author": "example.com",
   "homepage": "https://electron-vite.org",

@@ -36,10 +36,10 @@ function SummaryCard({ label, value, sub, colorClass, icon }) {
   )
 }
 
-function DailySummary({ onBack }) {
+function DailySummary({ onBack, initialDate }) {
   const [report, setReport] = useState(null)
   const [dates, setDates] = useState([])
-  const [selectedDate, setSelectedDate] = useState(getTodayBusinessDate())
+  const [selectedDate, setSelectedDate] = useState(initialDate || getTodayBusinessDate())
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('payments')
 

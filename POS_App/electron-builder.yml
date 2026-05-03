@@ -1,5 +1,5 @@
-appId: com.farrukh.waiterpos
-productName: Waiter POS
+appId: com.farrukh.pos
+productName: FARRUKH
 directories:
   buildResources: build
 files:
@@ -30,11 +30,11 @@ extraResources:
       - "!.git/**"
 win:
   icon: resources/icon.png
-  executableName: WaiterPOS
+  executableName: FARRUKH
 nsis:
-  artifactName: WaiterPOS-${version}-Setup.${ext}
-  shortcutName: Waiter POS
-  uninstallDisplayName: Waiter POS
+  artifactName: FARRUKH-${version}-Setup.${ext}
+  shortcutName: FARRUKH
+  uninstallDisplayName: FARRUKH
   createDesktopShortcut: always
   oneClick: false
   allowToChangeInstallationDirectory: true
@@ -48,7 +48,7 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
 dmg:
-  artifactName: WaiterPOS-${version}.${ext}
+  artifactName: FARRUKH-${version}.${ext}
 linux:
   icon: resources/icon.png
   target:
@@ -57,7 +57,7 @@ linux:
   maintainer: Farrukh Restaurant
   category: Office
 appImage:
-  artifactName: WaiterPOS-${version}.${ext}
+  artifactName: FARRUKH-${version}.${ext}
 deb:
   artifactName: WaiterPOS-${version}.${ext}
 npmRebuild: false

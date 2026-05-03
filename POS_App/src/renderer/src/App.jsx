@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { UtensilsCrossed, Settings, BarChart3, Edit, Smartphone, LayoutGrid } from 'lucide-react'
+import { UtensilsCrossed, Settings, BarChart3, Edit, Smartphone, LayoutGrid, TrendingUp } from 'lucide-react'
 import DashboardTabs from './components/Dashboard/DashboardTabs'
 import OrderView from './components/Layout/OrderView'
 import DailySummary from './components/DailySummary/DailySummary'
+import SalesHistory from './components/SalesHistory/SalesHistory'
 import AttendanceAdmin from './components/AttendanceAdmin/AttendanceAdmin'
 import MenuEditor from './components/MenuEditor/MenuEditor'
 import TableEditor from './components/TableEditor/TableEditor'
@@ -14,8 +15,9 @@ import useMenuStore from './store/useMenuStore'
 import useOrderStore from './store/useOrderStore'
 
 function App() {
-  // 'dashboard' | 'orderView' | 'dailySummary' | 'attendanceAdmin' | 'menuEditor'
+  // 'dashboard' | 'orderView' | 'dailySummary' | 'salesHistory' | 'attendanceAdmin' | 'menuEditor'
   const [view, setView] = useState('dashboard')
+  const [historyDate, setHistoryDate] = useState(null)
   const [showPinModal, setShowPinModal] = useState(false)   // null | 'menu' | 'tables'
   const [pinTarget, setPinTarget] = useState(null)
   const [showWaiterConnect, setShowWaiterConnect] = useState(false)
@@ -144,12 +146,20 @@ function App() {
             <span>Menu</span>
           </button>
           <button
-            onClick={() => setView('dailySummary')}
+            onClick={() => { setHistoryDate(null); setView('dailySummary') }}
             title="Daily Summary"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-cream-300 hover:text-cream-50 hover:bg-ink-200 transition-colors text-sm font-medium"
           >
             <BarChart3 size={16} />
             <span>Summary</span>
+          </button>
+          <button
+            onClick={() => setView('salesHistory')}
+            title="Sales History"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-cream-300 hover:text-cream-50 hover:bg-ink-200 transition-colors text-sm font-medium"
+          >
+            <TrendingUp size={16} />
+            <span>History</span>
           </button>
           <button
             onClick={() => setView('attendanceAdmin')}
@@ -172,7 +182,18 @@ function App() {
           />
         )}
         {view === 'orderView' && <OrderView onBack={handleBack} />}
-        {view === 'dailySummary' && <DailySummary onBack={() => setView('dashboard')} />}
+        {view === 'dailySummary' && (
+          <DailySummary
+            onBack={() => { setHistoryDate(null); setView(historyDate ? 'salesHistory' : 'dashboard') }}
+            initialDate={historyDate || undefined}
+          />
+        )}
+        {view === 'salesHistory' && (
+          <SalesHistory
+            onBack={() => setView('dashboard')}
+            onViewDay={(date) => { setHistoryDate(date); setView('dailySummary') }}
+          />
+        )}
         {view === 'attendanceAdmin' && <AttendanceAdmin onBack={() => setView('dashboard')} />}
         {view === 'menuEditor' && <MenuEditor onBack={() => setView('dashboard')} />}
         {view === 'tableEditor' && <TableEditor onBack={() => setView('dashboard')} />}
