@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import useMenuStore from '../../store/useMenuStore'
 import useOrderStore from '../../store/useOrderStore'
 import FoodTile from './FoodTile'
@@ -12,18 +12,22 @@ function MenuGrid() {
 
   const filtered = menuItems.filter((i) => i.category === selectedCategory)
 
-  const handleAdd = (item) => {
+  const handleAdd = useCallback((item) => {
     if (needsModifier(item)) {
       setPendingItem(item)
     } else {
       addItem(item)
     }
-  }
+  }, [addItem])
 
-  const handleModifierConfirm = (modifier) => {
+  const handleRemove = useCallback((item) => {
+    removeItem(item)
+  }, [removeItem])
+
+  const handleModifierConfirm = useCallback((modifier) => {
     addItem(pendingItem, modifier)
     setPendingItem(null)
-  }
+  }, [addItem, pendingItem])
 
   return (
     <div className="flex flex-col h-full">
@@ -56,7 +60,7 @@ function MenuGrid() {
               item={item}
               qty={getItemQty(item.id)}
               onAdd={handleAdd}
-              onRemove={removeItem}
+              onRemove={handleRemove}
             />
           ))}
         </div>

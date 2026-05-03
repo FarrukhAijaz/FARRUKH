@@ -65,7 +65,7 @@ const useAppStore = create((set, get) => ({
         connectError: '',
       })
 
-      // Start polling menu every 15 seconds
+      // Start polling menu every 5 seconds
       if (pollingInterval) clearInterval(pollingInterval)
       pollingInterval = setInterval(async () => {
         try {
@@ -82,7 +82,7 @@ const useAppStore = create((set, get) => ({
         } catch (err) {
           // Silently fail polling - don't interrupt user experience
         }
-      }, 15000)
+      }, 5000)
     } catch (err) {
       set({
         connected: false,

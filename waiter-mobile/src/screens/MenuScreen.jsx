@@ -8,9 +8,9 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  SafeAreaView,
   Alert,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect } from '@react-navigation/native'
 import useAppStore from '../store/useAppStore'
 import { getBaseURL } from '../api'
@@ -195,9 +195,9 @@ export default function MenuScreen({ navigation }) {
     setRefreshing(false)
   }
 
-  // Poll every 8 seconds so this waiter sees if another waiter punches the same table
+  // Poll every 5 seconds so this waiter sees if another waiter punches the same table
   useEffect(() => {
-    const id = setInterval(loadTables, 8000)
+    const id = setInterval(loadTables, 5000)
     return () => clearInterval(id)
   }, [])
 
@@ -246,7 +246,7 @@ export default function MenuScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f0e8' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#2d5a2d' }} edges={['top']}>
       {/* Header */}
       <View style={{ backgroundColor: '#2d5a2d', paddingHorizontal: 16, paddingVertical: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -258,20 +258,37 @@ export default function MenuScreen({ navigation }) {
               {selectedTable?.name}
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={handleRefreshMenu}
-            disabled={refreshing}
-            style={{ marginRight: 12, opacity: refreshing ? 0.5 : 1 }}
-          >
-            <Text style={{ color: '#a8d5a8', fontSize: 18, fontWeight: '300' }}>⟳</Text>
-          </TouchableOpacity>
-          <View style={{ backgroundColor: statusStyle.badge, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 }}>
-            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{statusStyle.label}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={handleRefreshMenu}
+              disabled={refreshing}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: refreshing ? '#1a3a1a' : '#3d7a3d',
+                borderRadius: 10,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                opacity: refreshing ? 0.7 : 1,
+              }}
+              activeOpacity={0.75}
+            >
+              {refreshing
+                ? <ActivityIndicator size="small" color="#a8d5a8" />
+                : <Text style={{ color: '#a8d5a8', fontSize: 16 }}>⟳</Text>
+              }
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                {refreshing ? 'Refreshing…' : 'Refresh'}
+              </Text>
+            </TouchableOpacity>
+            <View style={{ backgroundColor: statusStyle.badge, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 }}>
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{statusStyle.label}</Text>
+            </View>
           </View>
         </View>
       </View>
-
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: '#f5f0e8' }}>
         {/* Existing order summary (read-only) */}
         {existingOrder && existingOrder.item_count > 0 && (
           <View style={{ backgroundColor: '#fffbeb', borderBottomWidth: 1, borderBottomColor: '#fde68a', padding: 12 }}>

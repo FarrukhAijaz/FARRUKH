@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { ChefHat, Receipt, CreditCard, XCircle, AlertCircle } from 'lucide-react'
 import useOrderStore from '../../store/useOrderStore'
 import useTableStore, { STATUS_CONFIG } from '../../store/useTableStore'
@@ -9,6 +9,20 @@ function OrderSidebar({ onPunch, onInterimBill, onCheckout, onSplitPay }) {
     useOrderStore()
   const { getSelectedTable } = useTableStore()
   const [actionLoading, setActionLoading] = useState(null)
+
+  // Local draft for the textarea — synced to store with a 400ms debounce
+  // so typing doesn't hammer Zustand state on every keystroke
+  const [instructionsDraft, setInstructionsDraft] = useState(specialInstructions)
+  const debounceRef = useRef(null)
+  const handleInstructionsChange = useCallback((text) => {
+    setInstructionsDraft(text)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setSpecialInstructions(text), 400)
+  }, [setSpecialInstructions])
+  // Keep draft in sync when order changes (e.g. new order loaded)
+  useEffect(() => {
+    setInstructionsDraft(specialInstructions)
+  }, [currentOrder?.id])
 
   // Only use table when this is actually a dine-in order with a table assigned
   const table = currentOrder?.table_id ? getSelectedTable() : null
@@ -151,8 +165,8 @@ function OrderSidebar({ onPunch, onInterimBill, onCheckout, onSplitPay }) {
         </label>
         <textarea
           rows={2}
-          value={specialInstructions}
-          onChange={(e) => setSpecialInstructions(e.target.value)}
+          value={instructionsDraft}
+          onChange={(e) => handleInstructionsChange(e.target.value)}
           placeholder="Allergies, notes for kitchen..."
           className="w-full bg-ink-200 border border-ink-100/30 rounded-lg px-3 py-2 text-cream-100 text-sm placeholder-cream-300/30 resize-none focus:outline-none focus:border-forest-500"
         />

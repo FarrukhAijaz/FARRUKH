@@ -6,8 +6,8 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  SafeAreaView,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import useAppStore from '../store/useAppStore'
 import { getTableImage } from '../tableImages'
 
@@ -121,7 +121,7 @@ export default function TableSelectScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f0e8' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#2d5a2d' }} edges={['top']}>
       {/* Header */}
       <View
         style={{
@@ -149,6 +149,7 @@ export default function TableSelectScreen({ navigation }) {
         data={tables}
         keyExtractor={(t) => String(t.id)}
         numColumns={2}
+        style={{ backgroundColor: '#f5f0e8' }}
         contentContainerStyle={{ padding: 10 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => <TableCard table={item} onPress={handleTablePress} />}

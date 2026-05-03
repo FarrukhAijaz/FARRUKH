@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import useAppStore from '../store/useAppStore'
 
 export default function ConnectScreen({ navigation }) {
@@ -29,6 +30,7 @@ export default function ConnectScreen({ navigation }) {
   }, [connected])
 
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f0e8' }} edges={['top']}>
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1, backgroundColor: '#f5f0e8' }}
@@ -116,5 +118,6 @@ export default function ConnectScreen({ navigation }) {
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   )
 }

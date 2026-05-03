@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, memo } from 'react'
 import { Plus, Minus } from 'lucide-react'
 
 const CATEGORY_COLORS = {
@@ -10,20 +10,21 @@ const CATEGORY_COLORS = {
   'Shared Journeys':  'bg-yellow-50 text-yellow-800',
 }
 
-function FoodTile({ item, qty, onAdd, onRemove }) {
+const FoodTile = memo(function FoodTile({ item, qty, onAdd, onRemove }) {
   const colorClass = CATEGORY_COLORS[item.category] || 'bg-cream-200 text-ink-200'
   const hasImage = item.image_path && item.image_path.startsWith('/')
   const isDeal = item.category === 'Shared Journeys'
   const isOutOfStock = item.in_stock === 0
-  // Always load through Express (port 3000) which serves BOTH seed images and uploaded images.
-  // Cache-bust by hashing the path so the browser refetches when image_path changes.
-  const pathHash = hasImage
-    ? Math.abs(item.image_path.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0))
-        .toString(36).slice(-6)
-    : ''
-  // Use updated_at/created_at as cache-buster when available (changes on every save)
-  const cacheKey = item.updated_at || item.created_at || pathHash
-  const imageSrc = hasImage ? `http://127.0.0.1:3000${item.image_path}?v=${encodeURIComponent(cacheKey)}` : null
+
+  const imageSrc = useMemo(() => {
+    if (!hasImage) return null
+    const pathHash = Math.abs(
+      item.image_path.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)
+    ).toString(36).slice(-6)
+    const cacheKey = item.updated_at || item.created_at || pathHash
+    return `http://127.0.0.1:3000${item.image_path}?v=${encodeURIComponent(cacheKey)}`
+  }, [hasImage, item.image_path, item.updated_at, item.created_at])
+
   const [imgError, setImgError] = useState(false)
 
   useEffect(() => {
@@ -103,6 +104,6 @@ function FoodTile({ item, qty, onAdd, onRemove }) {
       </div>
     </div>
   )
-}
+})
 
 export default FoodTile
