@@ -1,4 +1,7 @@
 import { ipcMain } from 'electron'
+import { app } from 'electron'
+import { writeFile } from 'fs/promises'
+import { join } from 'path'
 import { getDatabase, getBusinessDate } from '../db/index.js'
 
 function registerPaymentHandlers() {
@@ -98,6 +101,71 @@ function registerPaymentHandlers() {
     const payments = db.get('payments').value()
     const dates = [...new Set(payments.map((p) => p.business_date))].sort().reverse()
     return dates
+  })
+
+  // Return per-day totals for every date in [startDate, endDate] inclusive (YYYY-MM-DD).
+  // Used by the calendar / history view.
+  ipcMain.handle('payment:getDateRange', (_, { startDate, endDate }) => {
+    const db = getDatabase()
+    const payments = db.get('payments').value()
+
+    // Build map: date → { total, cash, card, count, discount }
+    const map = {}
+    for (const p of payments) {
+      const d = p.business_date
+      if (d < startDate || d > endDate) continue
+      if (!map[d]) map[d] = { date: d, total: 0, cash: 0, card: 0, count: 0, discounts: 0 }
+      map[d].total += p.amount
+      map[d].count += 1
+      map[d].discounts += p.discount_amount || 0
+      if (p.payment_method === 'cash') map[d].cash += p.amount
+      else map[d].card += p.amount
+    }
+
+    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date))
+  })
+
+  // Export a date range to CSV and save it to the user's Documents folder.
+  // Returns { filePath } on success.
+  ipcMain.handle('payment:exportCSV', async (_, { startDate, endDate }) => {
+    const db = getDatabase()
+    const payments = db.get('payments').value()
+    const orders = db.get('orders').value()
+    const orderMap = {}
+    for (const o of orders) orderMap[o.id] = o
+
+    const inRange = payments
+      .filter((p) => p.business_date >= startDate && p.business_date <= endDate)
+      .sort((a, b) => a.paid_at.localeCompare(b.paid_at))
+
+    const rows = [
+      ['Date', 'Time', 'Order #', 'Table', 'Channel', 'Items Sold', 'Items Cancelled',
+       'Subtotal', 'Discount Type', 'Discount Value', 'Discount Amount', 'Total Paid', 'Payment Method',
+       'Cash Received', 'Change Given'].join(',')
+    ]
+
+    for (const p of inRange) {
+      const order = orderMap[p.order_id]
+      const items = order ? (typeof order.items === 'string' ? JSON.parse(order.items) : order.items || []) : []
+      const sold = items.filter((i) => !i.cancelled).reduce((s, i) => s + (i.qty || 1), 0)
+      const cancelled = items.filter((i) => i.cancelled).reduce((s, i) => s + (i.qty || 1), 0)
+      const time = new Date(p.paid_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+      const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+      rows.push([
+        p.business_date, time, p.order_id, esc(p.table_name || ''),
+        esc(order?.channel || 'dine_in'), sold, cancelled,
+        (p.subtotal || p.amount).toFixed(2),
+        p.discount_type || '', p.discount_value || '', (p.discount_amount || 0).toFixed(2),
+        p.amount.toFixed(2), p.payment_method,
+        (p.cash_received || ''), (p.change_given || '')
+      ].join(','))
+    }
+
+    const csv = rows.join('\n')
+    const filename = `farrukh-sales-${startDate}-to-${endDate}.csv`
+    const filePath = join(app.getPath('documents'), filename)
+    await writeFile(filePath, csv, 'utf8')
+    return { filePath, count: inRange.length }
   })
 }
 

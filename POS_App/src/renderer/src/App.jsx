@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { UtensilsCrossed, Settings, BarChart3, Edit, Smartphone } from 'lucide-react'
+import { UtensilsCrossed, Settings, BarChart3, Edit, Smartphone, LayoutGrid } from 'lucide-react'
 import DashboardTabs from './components/Dashboard/DashboardTabs'
 import OrderView from './components/Layout/OrderView'
 import DailySummary from './components/DailySummary/DailySummary'
 import AttendanceAdmin from './components/AttendanceAdmin/AttendanceAdmin'
 import MenuEditor from './components/MenuEditor/MenuEditor'
+import TableEditor from './components/TableEditor/TableEditor'
 import SuperuserPinModal from './components/MenuEditor/SuperuserPinModal'
 import OrderTypeModal from './components/OrderTypeModal/OrderTypeModal'
 import WaiterConnectModal from './components/WaiterConnect/WaiterConnectModal'
@@ -15,7 +16,8 @@ import useOrderStore from './store/useOrderStore'
 function App() {
   // 'dashboard' | 'orderView' | 'dailySummary' | 'attendanceAdmin' | 'menuEditor'
   const [view, setView] = useState('dashboard')
-  const [showPinModal, setShowPinModal] = useState(false)
+  const [showPinModal, setShowPinModal] = useState(false)   // null | 'menu' | 'tables'
+  const [pinTarget, setPinTarget] = useState(null)
   const [showWaiterConnect, setShowWaiterConnect] = useState(false)
 
   // When non-null, the OrderTypeModal is visible (WhatsApp / Delivery only).
@@ -126,7 +128,15 @@ function App() {
             <span>Waiter</span>
           </button>
           <button
-            onClick={() => setShowPinModal(true)}
+            onClick={() => { setPinTarget('tables'); setShowPinModal(true) }}
+            title="Table Manager"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-cream-300 hover:text-cream-50 hover:bg-ink-200 transition-colors text-sm font-medium"
+          >
+            <LayoutGrid size={16} />
+            <span>Tables</span>
+          </button>
+          <button
+            onClick={() => { setPinTarget('menu'); setShowPinModal(true) }}
             title="Menu Editor"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-cream-300 hover:text-cream-50 hover:bg-ink-200 transition-colors text-sm font-medium"
           >
@@ -165,6 +175,7 @@ function App() {
         {view === 'dailySummary' && <DailySummary onBack={() => setView('dashboard')} />}
         {view === 'attendanceAdmin' && <AttendanceAdmin onBack={() => setView('dashboard')} />}
         {view === 'menuEditor' && <MenuEditor onBack={() => setView('dashboard')} />}
+        {view === 'tableEditor' && <TableEditor onBack={() => setView('dashboard')} />}
       </main>
 
       {/* PIN Modal for Menu Editor */}
@@ -172,7 +183,7 @@ function App() {
         <SuperuserPinModal
           onSuccess={() => {
             setShowPinModal(false)
-            setView('menuEditor')
+            setView(pinTarget === 'tables' ? 'tableEditor' : 'menuEditor')
           }}
           onCancel={() => setShowPinModal(false)}
         />

@@ -72,6 +72,12 @@ function getDatabase() {
       }
     }
 
+    // Migrate existing tables — add image_path if column is missing
+    const existingTables = db.get('tables').value()
+    if (existingTables.length > 0 && existingTables[0].image_path === undefined) {
+      db.set('tables', existingTables.map((t) => ({ ...t, image_path: null }))).write()
+    }
+
     // Seed tables if empty
     if (db.get('tables').value().length === 0) {
       const tableNames = [
@@ -83,7 +89,8 @@ function getDatabase() {
         id: i + 1,
         name,
         status: 'empty',
-        current_order_id: null
+        current_order_id: null,
+        image_path: null
       }))
       db.set('tables', tables).write()
     }

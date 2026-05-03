@@ -9,7 +9,29 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import useAppStore from '../store/useAppStore'
-import { getTableImage } from '../tableImages'
+import { getBaseURL } from '../api'
+
+// Maps table name prefix → seed image filename served by Express at /tables/
+const SEED_IMAGE_FILES = {
+  Karachi:     'Karachi.png',
+  Lahori:      'Lahore.png',
+  Islamabadi:  'Islamabad.png',
+  Peshawari:   'Peshawar.png',
+  Multani:     'multan.png',
+  Faisalabadi: 'Faislabad.png',
+  Rawalpindi:  'Rawalpindi.png',
+  Hyderabadi:  'Hyderabad.png',
+  Quetta:      'Quetta.png',
+  Gujrati:     'Gujrat.png',
+}
+
+// Returns a /tables/Filename.png path — uploaded image wins, seed image is fallback.
+// Both are served by Express, so both work identically to uploaded menu images.
+function resolveTableImagePath(table) {
+  if (table.image_path) return table.image_path
+  const prefix = Object.keys(SEED_IMAGE_FILES).find((k) => table.name.startsWith(k))
+  return prefix ? `/tables/${SEED_IMAGE_FILES[prefix]}` : null
+}
 
 const STATUS_STYLE = {
   empty:       { border: '#d1d5db', badge: '#6b7280', dot: '#9ca3af', label: 'Empty' },
@@ -19,10 +41,17 @@ const STATUS_STYLE = {
   waiting:     { border: '#ea580c', badge: '#ea580c', dot: '#f97316', label: 'Waiting' },
 }
 
-function TableCard({ table, onPress }) {
+function TableCard({ table, onPress, serverBase }) {
   const style = STATUS_STYLE[table.status] || STATUS_STYLE.empty
   const order = table.current_order
-  const image = getTableImage(table.name)
+
+  // All images go through the Express server — same path as menu uploaded images (which work).
+  // No require() vs {uri} switching; both seed and uploaded images use identical code.
+  // ?v= cache-bust ensures a new timestamp filename always produces a fresh request.
+  const imagePath = resolveTableImagePath(table)
+  const imageUri = imagePath
+    ? `${serverBase}${imagePath}?v=${encodeURIComponent(imagePath)}`
+    : null
 
   return (
     <TouchableOpacity
@@ -43,9 +72,14 @@ function TableCard({ table, onPress }) {
         minHeight: 110,
       }}
     >
-      {/* Table image */}
-      {image ? (
-        <Image source={image} style={{ width: '100%', height: 70 }} resizeMode="cover" />
+      {/* All images use {uri} via Express — same as menu images which are confirmed working */}
+      {imageUri ? (
+        <Image
+          key={imageUri}
+          source={{ uri: imageUri }}
+          style={{ width: '100%', height: 70 }}
+          resizeMode="cover"
+        />
       ) : (
         <View style={{ width: '100%', height: 70, backgroundColor: '#e8e4dc', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 28 }}>🪑</Text>
@@ -101,6 +135,7 @@ function TableCard({ table, onPress }) {
 export default function TableSelectScreen({ navigation }) {
   const { tables, loadTables, setSelectedTable, serverIp, disconnect } = useAppStore()
   const [refreshing, setRefreshing] = React.useState(false)
+  const serverBase = getBaseURL()
 
   // Poll every 8 seconds so table statuses stay current across all devices
   useEffect(() => {
@@ -149,10 +184,11 @@ export default function TableSelectScreen({ navigation }) {
         data={tables}
         keyExtractor={(t) => String(t.id)}
         numColumns={2}
+        extraData={tables}
         style={{ backgroundColor: '#f5f0e8' }}
         contentContainerStyle={{ padding: 10 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        renderItem={({ item }) => <TableCard table={item} onPress={handleTablePress} />}
+        renderItem={({ item }) => <TableCard table={item} onPress={handleTablePress} serverBase={serverBase} />}
       />
     </SafeAreaView>
   )

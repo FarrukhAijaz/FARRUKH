@@ -1,8 +1,7 @@
 import { STATUS_CONFIG } from '../../store/useTableStore'
 import { UtensilsCrossed } from 'lucide-react'
 
-// Map each table name prefix to its image file in /tables/
-// Always served through Express (port 3000) so it works in both dev and packaged builds.
+// Fallback prefix → seed image map (used when table has no custom image_path)
 const TABLE_IMAGES = {
   'Lahori':     { src: 'http://127.0.0.1:3000/tables/Lahore.png' },
   'Karachi':    { src: 'http://127.0.0.1:3000/tables/Karachi.png' },
@@ -16,14 +15,19 @@ const TABLE_IMAGES = {
   'Gujrati':    { src: 'http://127.0.0.1:3000/tables/Gujrat.png', pos: 'object-[center_32%]' },
 }
 
-function getTableImage(name) {
-  const key = Object.keys(TABLE_IMAGES).find((k) => name.startsWith(k))
+function getTableImage(table) {
+  // Custom uploaded image takes priority
+  if (table.image_path) {
+    return { src: `http://127.0.0.1:3000${table.image_path}`, pos: 'object-center' }
+  }
+  // Fall back to seed image by name prefix
+  const key = Object.keys(TABLE_IMAGES).find((k) => table.name.startsWith(k))
   return key ? TABLE_IMAGES[key] : null
 }
 
 function TableTile({ table, onClick }) {
   const cfg = STATUS_CONFIG[table.status] || STATUS_CONFIG.empty
-  const imgEntry = getTableImage(table.name)
+  const imgEntry = getTableImage(table)
   const imgSrc = imgEntry?.src ?? null
   const imgPos = imgEntry?.pos ?? 'object-top'
 

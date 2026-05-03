@@ -7,7 +7,11 @@ const api = {
     updateStatus: (id, status) => ipcRenderer.invoke('table:updateStatus', { id, status }),
     assignOrder: (tableId, orderId) =>
       ipcRenderer.invoke('table:assignOrder', { tableId, orderId }),
-    clearOrder: (tableId) => ipcRenderer.invoke('table:clearOrder', { tableId })
+    clearOrder: (tableId) => ipcRenderer.invoke('table:clearOrder', { tableId }),
+    create: (name, image_path) => ipcRenderer.invoke('table:create', { name, image_path }),
+    delete: (id) => ipcRenderer.invoke('table:delete', { id }),
+    update: (id, changes) => ipcRenderer.invoke('table:update', { id, changes }),
+    uploadImage: (filename, buffer) => ipcRenderer.invoke('table:uploadImage', { filename, buffer })
   },
   menu: {
     getAll: () => ipcRenderer.invoke('menu:getAll'),
@@ -61,7 +65,9 @@ const api = {
   },
   payments: {
     getDailyReport: (date) => ipcRenderer.invoke('payment:getDailyReport', { date }),
-    listDates: () => ipcRenderer.invoke('payment:listDates')
+    listDates: () => ipcRenderer.invoke('payment:listDates'),
+    getDateRange: (startDate, endDate) => ipcRenderer.invoke('payment:getDateRange', { startDate, endDate }),
+    exportCSV: (startDate, endDate) => ipcRenderer.invoke('payment:exportCSV', { startDate, endDate })
   },
   events: {
     onOrderPushed: (cb) => ipcRenderer.on('order:pushed', (_, data) => cb(data))

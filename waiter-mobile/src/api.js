@@ -11,7 +11,8 @@ export const getBaseURL = () => baseURL
 
 export const fetchMenu = () => axios.get(`${baseURL}/api/menu`, { timeout: 5000 })
 
-export const fetchTables = () => axios.get(`${baseURL}/api/tables`, { timeout: 5000 })
+export const fetchTables = () =>
+  axios.get(`${baseURL}/api/tables?_t=${Date.now()}`, { timeout: 5000 })
 
 export const fetchTableOrder = (tableId) =>
   axios.get(`${baseURL}/api/tables/${tableId}/order`, { timeout: 5000 })

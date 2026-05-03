@@ -53,26 +53,33 @@ export default function WaiterConnectModal({ onClose }) {
     }
   }, [])
 
+  const prevMetroStatus = useRef(null)
+
   // Poll Metro status every 2s
   useEffect(() => {
     const poll = async () => {
       try {
         const s = await window.api.metro.getStatus()
         setMetro(s)
+        // When Metro transitions to running, re-fetch IPs and force QR redraw
+        if (s.status === 'running' && prevMetroStatus.current !== 'running') {
+          fetchUrls()
+        }
+        prevMetroStatus.current = s.status
       } catch {}
     }
     poll()
     pollRef.current = setInterval(poll, 2000)
     return () => clearInterval(pollRef.current)
-  }, [])
+  }, [fetchUrls])
 
   useEffect(() => { fetchUrls() }, [fetchUrls])
 
   useEffect(() => {
-    if (loading || !selectedUrl) return
+    if (loading || !selectedUrl || metro.status !== 'running') return
     const t = setTimeout(() => drawQr(selectedUrl), 50)
     return () => clearTimeout(t)
-  }, [loading, selectedUrl, drawQr])
+  }, [loading, selectedUrl, metro.status, drawQr])
 
   const handleCopy = async () => {
     if (!selectedUrl) return

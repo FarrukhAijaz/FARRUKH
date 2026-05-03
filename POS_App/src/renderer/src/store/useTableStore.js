@@ -80,6 +80,25 @@ const useTableStore = create((set, get) => ({
     }))
   },
 
+  createTable: async (name, image_path) => {
+    const newTable = await window.api.tables.create(name, image_path)
+    set((state) => ({ tables: [...state.tables, newTable] }))
+    return newTable
+  },
+
+  deleteTable: async (id) => {
+    await window.api.tables.delete(id)
+    set((state) => ({ tables: state.tables.filter((t) => t.id !== id) }))
+  },
+
+  updateTable: async (id, changes) => {
+    const updated = await window.api.tables.update(id, changes)
+    set((state) => ({
+      tables: state.tables.map((t) => (t.id === id ? updated : t))
+    }))
+    return updated
+  },
+
   getSelectedTable: () => {
     const { tables, selectedTableId } = get()
     return tables.find((t) => t.id === selectedTableId) || null
