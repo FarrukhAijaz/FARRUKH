@@ -65,6 +65,13 @@ const api = {
   },
   events: {
     onOrderPushed: (cb) => ipcRenderer.on('order:pushed', (_, data) => cb(data))
+  },
+  network: {
+    getUrls: () => ipcRenderer.invoke('network:getUrls')
+  },
+  metro: {
+    getStatus: () => ipcRenderer.invoke('metro:getStatus'),
+    restart: () => ipcRenderer.invoke('metro:restart')
   }
 }
 

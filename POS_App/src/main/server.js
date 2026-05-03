@@ -55,16 +55,16 @@ export function startServer(mainWindow) {
   app.use(express.json())
 
   // Serve seed menu images.
-  // electronApp.getAppPath() always returns the project root (works in both dev and prod).
-  // In dev:  POS_App/                  → src/renderer/public exists
-  // In prod: POS_App/                  → resources/app.asar exists, but images are in out/renderer
+  // Dev:  src/renderer/public  (source tree)
+  // Prod: process.resourcesPath/public  (copied there via extraResources in electron-builder.yml)
   const appRoot = electronApp.getAppPath()
-  const seedPublicDir = join(appRoot, 'src', 'renderer', 'public')
-  const seedPublicDirProd = join(appRoot, '..', 'renderer', 'public')
+  const seedPublicDirDev = join(appRoot, 'src', 'renderer', 'public')
+  const seedPublicDirProd = join(process.resourcesPath || join(appRoot, '..'), 'public')
   const uploadedPublicDir = join(electronApp.getPath('userData'), 'public')
-  console.log('[Server] Serving seed images from:', seedPublicDir)
+  console.log('[Server] Serving seed images (dev) from:', seedPublicDirDev)
+  console.log('[Server] Serving seed images (prod) from:', seedPublicDirProd)
   console.log('[Server] Serving uploaded images from:', uploadedPublicDir)
-  app.use(express.static(seedPublicDir))
+  app.use(express.static(seedPublicDirDev))
   app.use(express.static(seedPublicDirProd))
   app.use(express.static(uploadedPublicDir))
 

@@ -11,6 +11,7 @@ import { registerPrinterHandlers } from './ipc/printerHandlers.js'
 import { registerPaymentHandlers } from './ipc/paymentHandlers.js'
 import { registerAttendanceHandlers } from './ipc/attendanceHandlers.js'
 import { startServer } from './server.js'
+import { startMetro, stopMetro } from './services/metroService.js'
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -66,6 +67,9 @@ app.whenReady().then(() => {
   createWindow()
   startServer(BrowserWindow.getAllWindows()[0])
 
+  // Start Expo Metro bundler in the background so Expo Go can connect
+  startMetro().catch((err) => console.error('[Metro] Startup error:', err))
+
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -78,6 +82,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  stopMetro()
 })
 
 // In this file you can include the rest of your app's specific main process

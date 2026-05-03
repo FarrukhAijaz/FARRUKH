@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "waiter-mobile",
+    "name": "Waiter POS",
     "slug": "waiter-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,20 +10,27 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#2d5a2d"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.farrukh.waiterpos"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#2d5a2d"
       },
+      "package": "com.farrukh.waiterpos",
       "edgeToEdgeEnabled": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
     }
   }
 }

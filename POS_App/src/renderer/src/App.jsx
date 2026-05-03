@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { UtensilsCrossed, Settings, BarChart3, Edit } from 'lucide-react'
+import { UtensilsCrossed, Settings, BarChart3, Edit, Smartphone } from 'lucide-react'
 import DashboardTabs from './components/Dashboard/DashboardTabs'
 import OrderView from './components/Layout/OrderView'
 import DailySummary from './components/DailySummary/DailySummary'
@@ -7,6 +7,7 @@ import AttendanceAdmin from './components/AttendanceAdmin/AttendanceAdmin'
 import MenuEditor from './components/MenuEditor/MenuEditor'
 import SuperuserPinModal from './components/MenuEditor/SuperuserPinModal'
 import OrderTypeModal from './components/OrderTypeModal/OrderTypeModal'
+import WaiterConnectModal from './components/WaiterConnect/WaiterConnectModal'
 import useTableStore from './store/useTableStore'
 import useMenuStore from './store/useMenuStore'
 import useOrderStore from './store/useOrderStore'
@@ -15,6 +16,7 @@ function App() {
   // 'dashboard' | 'orderView' | 'dailySummary' | 'attendanceAdmin' | 'menuEditor'
   const [view, setView] = useState('dashboard')
   const [showPinModal, setShowPinModal] = useState(false)
+  const [showWaiterConnect, setShowWaiterConnect] = useState(false)
 
   // When non-null, the OrderTypeModal is visible (WhatsApp / Delivery only).
   // Shape: { channel: 'whatsapp'|'delivery', context: string }
@@ -116,6 +118,14 @@ function App() {
         <div className="flex items-center gap-3">
           <span className="text-cream-300 text-sm">{tables.length} Tables</span>
           <button
+            onClick={() => setShowWaiterConnect(true)}
+            title="Waiter App Connect"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-cream-300 hover:text-cream-50 hover:bg-ink-200 transition-colors text-sm font-medium"
+          >
+            <Smartphone size={16} />
+            <span>Waiter</span>
+          </button>
+          <button
             onClick={() => setShowPinModal(true)}
             title="Menu Editor"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-cream-300 hover:text-cream-50 hover:bg-ink-200 transition-colors text-sm font-medium"
@@ -176,6 +186,11 @@ function App() {
           onConfirm={handleOrderTypeConfirm}
           onCancel={handleOrderTypeCancel}
         />
+      )}
+
+      {/* Waiter App connect modal */}
+      {showWaiterConnect && (
+        <WaiterConnectModal onClose={() => setShowWaiterConnect(false)} />
       )}
     </div>
   )

@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: waiter-pos
+appId: com.farrukh.waiterpos
+productName: Waiter POS
 directories:
   buildResources: build
 files:
@@ -8,17 +8,38 @@ files:
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+# Unpack native modules AND seed images so Express can read them at runtime
 asarUnpack:
   - resources/**
   - "**/*.node"
+# Copy seed menu images into resources/ so they're available outside the asar
+# Also copy waiter-mobile source (no node_modules) so Metro can start automatically
+extraResources:
+  - from: src/renderer/public
+    to: public
+    filter:
+      - "**/*"
+  - from: ../waiter-mobile
+    to: waiter-mobile
+    filter:
+      - "**/*"
+      - "!node_modules/**"
+      - "!.expo/**"
+      - "!android/**"
+      - "!ios/**"
+      - "!.git/**"
 win:
-  executableName: waiter-pos
+  icon: resources/icon.png
+  executableName: WaiterPOS
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
+  artifactName: WaiterPOS-${version}-Setup.${ext}
+  shortcutName: Waiter POS
+  uninstallDisplayName: Waiter POS
   createDesktopShortcut: always
+  oneClick: false
+  allowToChangeInstallationDirectory: true
 mac:
+  icon: resources/icon.png
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
@@ -27,17 +48,17 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: WaiterPOS-${version}.${ext}
 linux:
+  icon: resources/icon.png
   target:
     - AppImage
-    - snap
     - deb
-  maintainer: electronjs.org
-  category: Utility
+  maintainer: Farrukh Restaurant
+  category: Office
 appImage:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: WaiterPOS-${version}.${ext}
+deb:
+  artifactName: WaiterPOS-${version}.${ext}
 npmRebuild: false
-publish:
-  provider: generic
-  url: https://example.com/auto-updates
+publish: null

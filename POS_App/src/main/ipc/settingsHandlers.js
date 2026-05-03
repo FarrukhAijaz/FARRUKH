@@ -1,6 +1,8 @@
 import { ipcMain } from 'electron'
 import { createHash, timingSafeEqual } from 'crypto'
 import { getDatabase } from '../db/index.js'
+import { getServerUrls } from '../services/networkService.js'
+import { getMetroStatus, startMetro } from '../services/metroService.js'
 
 function hashPin(pin) {
   return createHash('sha256').update(String(pin)).digest('hex')
@@ -56,6 +58,19 @@ function registerSettingsHandlers() {
       console.error('[IPC] PIN verification error:', err)
       return { valid: false, message: 'Verification error' }
     }
+  })
+
+  ipcMain.handle('network:getUrls', () => {
+    return getServerUrls(3000)
+  })
+
+  ipcMain.handle('metro:getStatus', () => {
+    return getMetroStatus()
+  })
+
+  ipcMain.handle('metro:restart', async () => {
+    await startMetro()
+    return getMetroStatus()
   })
 }
 

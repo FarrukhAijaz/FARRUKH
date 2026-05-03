@@ -2,18 +2,18 @@ import { STATUS_CONFIG } from '../../store/useTableStore'
 import { UtensilsCrossed } from 'lucide-react'
 
 // Map each table name prefix to its image file in /tables/
-// Optional `pos` overrides the default object-top alignment (e.g. 'object-center')
+// Always served through Express (port 3000) so it works in both dev and packaged builds.
 const TABLE_IMAGES = {
-  'Lahori':     { src: '/tables/Lahore.png' },
-  'Karachi':    { src: '/tables/Karachi.png' },
-  'Islamabadi': { src: '/tables/Islamabad.png' },
-  'Peshawari':  { src: '/tables/Peshawar.png' },
-  'Multani':    { src: '/tables/multan.png' },
-  'Faisalabadi':{ src: '/tables/Faislabad.png' },
-  'Rawalpindi': { src: '/tables/Rawalpindi.png' },
-  'Hyderabadi': { src: '/tables/Hyderabad.png' },
-  'Quetta':     { src: '/tables/Quetta.png' },
-  'Gujrati':    { src: '/tables/Gujrat.png', pos: 'object-[center_32%]' },
+  'Lahori':     { src: 'http://127.0.0.1:3000/tables/Lahore.png' },
+  'Karachi':    { src: 'http://127.0.0.1:3000/tables/Karachi.png' },
+  'Islamabadi': { src: 'http://127.0.0.1:3000/tables/Islamabad.png' },
+  'Peshawari':  { src: 'http://127.0.0.1:3000/tables/Peshawar.png' },
+  'Multani':    { src: 'http://127.0.0.1:3000/tables/multan.png' },
+  'Faisalabadi':{ src: 'http://127.0.0.1:3000/tables/Faislabad.png' },
+  'Rawalpindi': { src: 'http://127.0.0.1:3000/tables/Rawalpindi.png' },
+  'Hyderabadi': { src: 'http://127.0.0.1:3000/tables/Hyderabad.png' },
+  'Quetta':     { src: 'http://127.0.0.1:3000/tables/Quetta.png' },
+  'Gujrati':    { src: 'http://127.0.0.1:3000/tables/Gujrat.png', pos: 'object-[center_32%]' },
 }
 
 function getTableImage(name) {
