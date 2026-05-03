@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Attendance Check-In</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5efe3;
+        --panel: #fffdf8;
+        --ink: #1f2c28;
+        --muted: #6a746f;
+        --accent: #2f6a4f;
+        --accent-soft: rgba(47, 106, 79, 0.12);
+        --danger: #b44646;
+        --border: #ddd3c1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top right, rgba(47, 106, 79, 0.18), transparent 32%),
+          linear-gradient(180deg, #f7f3eb 0%, var(--bg) 100%);
+        color: var(--ink);
+      }
+
+      .shell {
+        width: min(100%, 560px);
+        margin: 0 auto;
+        padding: 20px 16px 32px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgba(26, 35, 30, 0.08);
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+      }
+
+      .hero {
+        margin-bottom: 18px;
+      }
+
+      .hero p,
+      .muted,
+      label {
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin: 18px 0;
+      }
+
+      .tab,
+      button {
+        border: 0;
+        border-radius: 14px;
+        font: inherit;
+      }
+
+      .tab {
+        padding: 11px 12px;
+        background: #e7e0d4;
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      .tab.active {
+        background: var(--accent);
+        color: white;
+      }
+
+      button.primary {
+        background: var(--accent);
+        color: white;
+        padding: 12px 14px;
+        font-weight: 700;
+      }
+
+      button.secondary {
+        background: var(--accent-soft);
+        color: var(--accent);
+        padding: 12px 14px;
+        font-weight: 700;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 12px 13px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: white;
+        color: var(--ink);
+        font: inherit;
+      }
+
+      .section {
+        display: none;
+      }
+
+      .section.active {
+        display: block;
+      }
+
+      .status {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: #f0eadf;
+        color: var(--ink);
+        white-space: pre-wrap;
+      }
+
+      .status.error {
+        background: #fce9e9;
+        color: var(--danger);
+      }
+
+      .status.success {
+        background: #eaf6ef;
+        color: var(--accent);
+      }
+
+      .hint {
+        margin-top: 12px;
+        font-size: 0.92rem;
+      }
+
+      .list {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .list-item {
+        padding: 12px;
+        border-radius: 14px;
+        background: #f7f2e8;
+        border: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="hero">
+        <h1>Attendance Check-In</h1>
+        <p>Use your enrolled phone on the same Wi-Fi as the POS. You will need your staff PIN and a fresh challenge code from the POS screen.</p>
+      </div>
+
+      <div class="card">
+        <div class="tabs">
+          <button class="tab active" data-section="status">Status</button>
+          <button class="tab" data-section="enroll">Enroll</button>
+          <button class="tab" data-section="verify">Check In/Out</button>
+        </div>
+
+        <section id="status" class="section active">
+          <button class="secondary" id="refresh-status">Refresh Staff Status</button>
+          <div id="staff-list" class="list"></div>
+        </section>
+
+        <section id="enroll" class="section">
+          <div class="grid">
+            <select id="enroll-staff"></select>
+            <input id="device-label" placeholder="Phone label, e.g. Ali iPhone" />
+            <input id="manager-pin" type="password" inputmode="numeric" placeholder="Manager PIN" />
+            <button class="primary" id="enroll-submit">Approve and Enroll This Phone</button>
+          </div>
+          <p class="hint muted">Enrollment replaces the previously approved phone for that staff member.</p>
+        </section>
+
+        <section id="verify" class="section">
+          <div class="grid">
+            <input id="challenge-code" placeholder="Challenge code from POS" />
+            <input id="device-token" placeholder="Device token after enrollment" />
+            <input id="staff-pin" type="password" inputmode="numeric" placeholder="Your staff PIN" />
+            <select id="verify-type">
+              <option value="check_in">Check In</option>
+              <option value="check_out">Check Out</option>
+            </select>
+            <button class="primary" id="verify-submit">Submit Attendance</button>
+          </div>
+          <p class="hint muted">Keep your device token private. It binds this phone to your account.</p>
+        </section>
+
+        <div id="status-box" class="status">Ready.</div>
+      </div>
+    </div>
+
+    <script>
+      const tabs = document.querySelectorAll('.tab')
+      const sections = document.querySelectorAll('.section')
+      const statusBox = document.getElementById('status-box')
+      const staffList = document.getElementById('staff-list')
+      const enrollStaff = document.getElementById('enroll-staff')
+      const initialParams = new URLSearchParams(window.location.search)
+
+      function setStatus(message, kind = '') {
+        statusBox.textContent = message
+        statusBox.className = `status${kind ? ` ${kind}` : ''}`
+      }
+
+      async function request(url, options = {}) {
+        const response = await fetch(url, {
+          headers: { 'Content-Type': 'application/json' },
+          ...options
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Request failed')
+        }
+        return data
+      }
+
+      function renderStaff(snapshot) {
+        staffList.innerHTML = ''
+        enrollStaff.innerHTML = ''
+
+        const staffEntries = snapshot.staff || []
+        if (!staffEntries.length) {
+          staffList.innerHTML = '<div class="list-item">No staff configured yet.</div>'
+          enrollStaff.innerHTML = '<option value="">No staff available</option>'
+          return
+        }
+
+        for (const staff of staffEntries) {
+          const option = document.createElement('option')
+          option.value = staff.id
+          option.textContent = `${staff.name} (${staff.role})`
+          enrollStaff.appendChild(option)
+        }
+
+        for (const record of snapshot.records || []) {
+          const node = document.createElement('div')
+          node.className = 'list-item'
+          node.innerHTML = `
+            <strong>${record.staff.name}</strong><br />
+            ${record.staff.role}<br />
+            Device: ${record.staff.enrollment?.device_label || 'Not enrolled'}<br />
+            State: ${record.isCheckedIn ? 'Checked in' : 'Checked out'}
+          `
+          staffList.appendChild(node)
+        }
+      }
+
+      async function loadStatus() {
+        try {
+          setStatus('Loading attendance status...')
+          const snapshot = await request('/api/attendance/status')
+          renderStaff(snapshot)
+          setStatus('Attendance status loaded.', 'success')
+        } catch (error) {
+          setStatus(error.message, 'error')
+        }
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          tabs.forEach((item) => item.classList.remove('active'))
+          sections.forEach((section) => section.classList.remove('active'))
+          tab.classList.add('active')
+          document.getElementById(tab.dataset.section).classList.add('active')
+        })
+      })
+
+      document.getElementById('refresh-status').addEventListener('click', loadStatus)
+
+      document.getElementById('enroll-submit').addEventListener('click', async () => {
+        try {
+          setStatus('Approving enrollment...')
+          const result = await request('/api/attendance/enroll', {
+            method: 'POST',
+            body: JSON.stringify({
+              staffId: Number(enrollStaff.value),
+              deviceLabel: document.getElementById('device-label').value,
+              managerPin: document.getElementById('manager-pin').value
+            })
+          })
+          document.getElementById('device-token').value = result.device_token
+          setStatus(`Enrollment approved. Save this device token securely: ${result.device_token}`, 'success')
+          await loadStatus()
+        } catch (error) {
+          setStatus(error.message, 'error')
+        }
+      })
+
+      document.getElementById('verify-submit').addEventListener('click', async () => {
+        try {
+          setStatus('Submitting attendance...')
+          const result = await request('/api/attendance/verify', {
+            method: 'POST',
+            body: JSON.stringify({
+              challengeCode: document.getElementById('challenge-code').value,
+              deviceToken: document.getElementById('device-token').value,
+              pin: document.getElementById('staff-pin').value,
+              type: document.getElementById('verify-type').value
+            })
+          })
+          setStatus(`${result.staff.name} ${result.event.type.replace('_', ' ')} recorded at ${new Date(result.event.timestamp).toLocaleString()}.`, 'success')
+          await loadStatus()
+        } catch (error) {
+          setStatus(error.message, 'error')
+        }
+      })
+
+      const initialChallengeCode = initialParams.get('challenge')
+      if (initialChallengeCode) {
+        document.getElementById('challenge-code').value = initialChallengeCode
+      }
+
+      loadStatus()
+    </script>
+  </body>
+</html>

@@ -9,6 +9,7 @@ import { registerOrderHandlers } from './ipc/orderHandlers.js'
 import { registerSettingsHandlers } from './ipc/settingsHandlers.js'
 import { registerPrinterHandlers } from './ipc/printerHandlers.js'
 import { registerPaymentHandlers } from './ipc/paymentHandlers.js'
+import { registerAttendanceHandlers } from './ipc/attendanceHandlers.js'
 import { startServer } from './server.js'
 
 function createWindow() {
@@ -60,6 +61,7 @@ app.whenReady().then(() => {
   registerSettingsHandlers()
   registerPrinterHandlers()
   registerPaymentHandlers()
+  registerAttendanceHandlers()
 
   createWindow()
   startServer(BrowserWindow.getAllWindows()[0])

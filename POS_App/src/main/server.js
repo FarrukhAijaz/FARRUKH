@@ -4,6 +4,13 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { getDatabase, getBusinessDate } from './db/index.js'
 import { printKitchenReceipt } from './services/printerService.js'
+import {
+  createChallenge,
+  enrollDevice,
+  getAttendanceSnapshot,
+  verifyChallenge
+} from './services/attendanceService.js'
+import { getServerUrls } from './services/networkService.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -28,6 +35,15 @@ function nextOrderId(db) {
 
 function parseItems(items) {
   return typeof items === 'string' ? JSON.parse(items) : items || []
+}
+
+function getRequestNetworkFingerprint(req) {
+  const forwarded = req.headers['x-forwarded-for']
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim()
+  }
+
+  return req.ip || req.socket?.remoteAddress || null
 }
 
 // ── server factory ────────────────────────────────────────────────────────────
@@ -96,6 +112,71 @@ export function startServer(mainWindow) {
       res.json({ ...order, items: parseItems(order.items) })
     } catch (err) {
       res.status(500).json({ error: err.message })
+    }
+  })
+
+  app.get('/api/attendance/status', (req, res) => {
+    try {
+      const db = getDatabase()
+      res.json(getAttendanceSnapshot(db, req.query.businessDate || getBusinessDate()))
+    } catch (err) {
+      res.status(500).json({ error: err.message })
+    }
+  })
+
+  app.get('/api/attendance/connection-info', (req, res) => {
+    res.json({
+      port: PORT,
+      urls: getServerUrls(PORT)
+    })
+  })
+
+  app.post('/api/attendance/challenge', (req, res) => {
+    try {
+      const db = getDatabase()
+      const challenge = createChallenge(db, {
+        staffId: req.body.staffId,
+        purpose: req.body.purpose || 'attendance',
+        networkFingerprint: getRequestNetworkFingerprint(req)
+      }, 'mobile-api')
+      res.json(challenge)
+    } catch (err) {
+      res.status(400).json({ error: err.message })
+    }
+  })
+
+  app.post('/api/attendance/enroll', (req, res) => {
+    try {
+      const db = getDatabase()
+      const enrollment = enrollDevice(
+        db,
+        {
+          staffId: req.body.staffId,
+          deviceLabel: req.body.deviceLabel,
+          managerPin: req.body.managerPin,
+          networkFingerprint: getRequestNetworkFingerprint(req)
+        },
+        'mobile-api'
+      )
+      res.json(enrollment)
+    } catch (err) {
+      res.status(400).json({ error: err.message })
+    }
+  })
+
+  app.post('/api/attendance/verify', (req, res) => {
+    try {
+      const db = getDatabase()
+      const result = verifyChallenge(db, {
+        challengeCode: req.body.challengeCode,
+        pin: req.body.pin,
+        deviceToken: req.body.deviceToken,
+        networkFingerprint: getRequestNetworkFingerprint(req),
+        type: req.body.type
+      })
+      res.json(result)
+    } catch (err) {
+      res.status(400).json({ error: err.message })
     }
   })
 

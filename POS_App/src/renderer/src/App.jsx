@@ -3,20 +3,22 @@ import { UtensilsCrossed, Settings, BarChart3 } from 'lucide-react'
 import DashboardTabs from './components/Dashboard/DashboardTabs'
 import OrderView from './components/Layout/OrderView'
 import DailySummary from './components/DailySummary/DailySummary'
+import AttendanceAdmin from './components/AttendanceAdmin/AttendanceAdmin'
 import OrderTypeModal from './components/OrderTypeModal/OrderTypeModal'
 import useTableStore from './store/useTableStore'
 import useMenuStore from './store/useMenuStore'
 import useOrderStore from './store/useOrderStore'
 
 function App() {
-  // 'dashboard' | 'orderView' | 'dailySummary'
+  // 'dashboard' | 'orderView' | 'dailySummary' | 'attendanceAdmin'
   const [view, setView] = useState('dashboard')
 
   // When non-null, the OrderTypeModal is visible (WhatsApp / Delivery only).
   // Shape: { channel: 'whatsapp'|'delivery', context: string }
   const [pendingSetup, setPendingSetup] = useState(null)
 
-  const { tables, loadTables, selectTable, updateTableRecord, registerMobileOrderListener } = useTableStore()
+  const { tables, loadTables, selectTable, updateTableRecord, registerMobileOrderListener } =
+    useTableStore()
   const { loadMenu } = useMenuStore()
   const { loadOrder, initOrder, clearOrder } = useOrderStore()
 
@@ -56,10 +58,9 @@ function App() {
     setPendingSetup({ table: null, channel, context: label })
   }
 
-  const handleChannelOrderSelect = (order, channel) => {
+  const handleChannelOrderSelect = (order) => {
     selectTable(null) // clear any previously selected dine-in table
-    const items =
-      typeof order.items === 'string' ? JSON.parse(order.items) : order.items || []
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items || []
     initOrder({ ...order, items })
     setView('orderView')
   }
@@ -80,8 +81,6 @@ function App() {
   // ── Back from order view ───────────────────────────────────────────────────
   const handleBack = async () => {
     const { currentOrder } = useOrderStore.getState()
-    const { getSelectedTable } = useTableStore.getState()
-    const table = getSelectedTable()
 
     const hasItems = currentOrder && currentOrder.items.filter((i) => !i.cancelled).length > 0
 
@@ -105,7 +104,9 @@ function App() {
           </div>
           <div>
             <h1 className="text-cream-100 font-bold text-base leading-none">FARRUKH</h1>
-            <p className="text-cream-300 text-xs">Fast Automated Restaurant Reservations &amp; Unified Kitchen Hub</p>
+            <p className="text-cream-300 text-xs">
+              Fast Automated Restaurant Reservations &amp; Unified Kitchen Hub
+            </p>
           </div>
         </div>
 
@@ -119,7 +120,11 @@ function App() {
             <BarChart3 size={16} />
             <span>Summary</span>
           </button>
-          <button className="text-cream-300 hover:text-cream-50 transition-colors">
+          <button
+            onClick={() => setView('attendanceAdmin')}
+            className="text-cream-300 hover:text-cream-50 transition-colors"
+            title="Attendance"
+          >
             <Settings size={18} />
           </button>
         </div>
@@ -137,6 +142,7 @@ function App() {
         )}
         {view === 'orderView' && <OrderView onBack={handleBack} />}
         {view === 'dailySummary' && <DailySummary onBack={() => setView('dashboard')} />}
+        {view === 'attendanceAdmin' && <AttendanceAdmin onBack={() => setView('dashboard')} />}
       </main>
 
       {/* Order-type selection modal */}
@@ -153,4 +159,3 @@ function App() {
 }
 
 export default App
-

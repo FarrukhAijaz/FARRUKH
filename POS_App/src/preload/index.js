@@ -38,6 +38,18 @@ const api = {
     set: (key, value) => ipcRenderer.invoke('settings:set', { key, value }),
     getAll: () => ipcRenderer.invoke('settings:getAll')
   },
+  attendance: {
+    listStaff: () => ipcRenderer.invoke('attendance:listStaff'),
+    createStaff: (payload) => ipcRenderer.invoke('attendance:createStaff', payload),
+    updateStaff: (staffId, updates) => ipcRenderer.invoke('attendance:updateStaff', { staffId, updates }),
+    enrollDevice: (payload) => ipcRenderer.invoke('attendance:enrollDevice', payload),
+    createChallenge: (payload) => ipcRenderer.invoke('attendance:createChallenge', payload),
+    createManualEvent: (payload) => ipcRenderer.invoke('attendance:createManualEvent', payload),
+    getSnapshot: (businessDate) => ipcRenderer.invoke('attendance:getSnapshot', { businessDate }),
+    getConnectionInfo: () => ipcRenderer.invoke('attendance:getConnectionInfo'),
+    devClearAttendanceData: () => ipcRenderer.invoke('attendance:devClearAttendanceData'),
+    devResetStaff: () => ipcRenderer.invoke('attendance:devResetStaff')
+  },
   payments: {
     getDailyReport: (date) => ipcRenderer.invoke('payment:getDailyReport', { date }),
     listDates: () => ipcRenderer.invoke('payment:listDates')

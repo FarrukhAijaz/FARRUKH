@@ -2,8 +2,15 @@ import low from 'lowdb'
 import FileSync from 'lowdb/adapters/FileSync'
 import { app } from 'electron'
 import { join } from 'path'
+import { createHash } from 'crypto'
 
 let db
+
+const DEFAULT_ATTENDANCE_SETTINGS = {
+  attendance_challenge_ttl_seconds: 45,
+  attendance_allowed_subnet_prefixes: [],
+  attendance_require_selfie: 'false'
+}
 
 function getDatabase() {
   if (!db) {
@@ -17,13 +24,53 @@ function getDatabase() {
       menu_items: [],
       orders: [],
       payments: [],
+      staff: [],
+      attendance_events: [],
+      attendance_challenges: [],
+      device_enrollments: [],
+      attendance_audit: [],
       settings: {
         printer_mock: 'true',
         printer_type: 'network',
-        printer_interface: '192.168.1.100:9100'
+        printer_interface: '192.168.1.100:9100',
+        ...DEFAULT_ATTENDANCE_SETTINGS
       },
-      _counters: { orders: 0, payments: 0, takeaway: 0 }
+      _counters: {
+        orders: 0,
+        payments: 0,
+        takeaway: 0,
+        staff: 0,
+        attendance_events: 0,
+        attendance_challenges: 0,
+        attendance_audit: 0,
+        device_enrollments: 0
+      }
     }).write()
+
+    const currentSettings = db.get('settings').value()
+    db.set('settings', {
+      ...DEFAULT_ATTENDANCE_SETTINGS,
+      ...currentSettings
+    }).write()
+
+    const currentCounters = db.get('_counters').value() || {}
+    db.set('_counters', {
+      orders: 0,
+      payments: 0,
+      takeaway: 0,
+      staff: 0,
+      attendance_events: 0,
+      attendance_challenges: 0,
+      attendance_audit: 0,
+      device_enrollments: 0,
+      ...currentCounters
+    }).write()
+
+    for (const key of ['staff', 'attendance_events', 'attendance_challenges', 'device_enrollments', 'attendance_audit']) {
+      if (!Array.isArray(db.get(key).value())) {
+        db.set(key, []).write()
+      }
+    }
 
     // Seed tables if empty
     if (db.get('tables').value().length === 0) {
@@ -153,6 +200,83 @@ function getDatabase() {
       return item
     })
     if (needsWrite) db.set('menu_items', migrated).write()
+
+    // ── Seed staff if table is empty ──────────────────────────────
+    if (db.get('staff').value().length === 0) {
+      // Edit names, roles, PINs, and shift times here before first launch.
+      // PIN must be 4–8 digits. Set is_manager: true on at least one person.
+      const hashPin = (pin) => createHash('sha256').update(String(pin)).digest('hex')
+      const now = new Date().toISOString()
+
+      const initialStaff = [
+        {
+          id: 1,
+          name: 'Ahmed (Manager)',
+          role: 'Manager',
+          is_manager: true,
+          phone_label: 'Ahmed iPhone',
+          shift_start: '10:00',
+          shift_end: '22:00',
+          pin: '1234'
+        },
+        {
+          id: 2,
+          name: 'Ali',
+          role: 'Waiter',
+          is_manager: false,
+          phone_label: 'Ali Samsung',
+          shift_start: '10:00',
+          shift_end: '18:00',
+          pin: '2222'
+        },
+        {
+          id: 3,
+          name: 'Sara',
+          role: 'Cashier',
+          is_manager: false,
+          phone_label: 'Sara iPhone',
+          shift_start: '10:00',
+          shift_end: '18:00',
+          pin: '3333'
+        },
+        {
+          id: 4,
+          name: 'Umar',
+          role: 'Waiter',
+          is_manager: false,
+          phone_label: 'Umar Phone',
+          shift_start: '14:00',
+          shift_end: '22:00',
+          pin: '4444'
+        },
+        {
+          id: 5,
+          name: 'Fatima',
+          role: 'Kitchen',
+          is_manager: false,
+          phone_label: 'Fatima Phone',
+          shift_start: '10:00',
+          shift_end: '18:00',
+          pin: '5555'
+        }
+      ]
+
+      const seeded = initialStaff.map(({ pin, ...rest }) => ({
+        ...rest,
+        active: true,
+        pin_hash: hashPin(pin),
+        enrolled_device_id: null,
+        created_at: now,
+        updated_at: now,
+        last_check_in_at: null,
+        last_check_out_at: null
+      }))
+
+      db.set('staff', seeded).write()
+      db.set('_counters.staff', initialStaff.length).write()
+
+      console.log('[DB] Seeded', initialStaff.length, 'staff members')
+    }
   }
   return db
 }
