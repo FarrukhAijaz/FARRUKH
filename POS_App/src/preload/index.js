@@ -10,7 +10,12 @@ const api = {
     clearOrder: (tableId) => ipcRenderer.invoke('table:clearOrder', { tableId })
   },
   menu: {
-    getAll: () => ipcRenderer.invoke('menu:getAll')
+    getAll: () => ipcRenderer.invoke('menu:getAll'),
+    update: (id, changes) => ipcRenderer.invoke('menu:update', { id, changes }),
+    toggleStock: (id) => ipcRenderer.invoke('menu:toggleStock', { id }),
+    uploadImage: (categoryFolder, filename, buffer) => ipcRenderer.invoke('menu:uploadImage', { categoryFolder, filename, buffer }),
+    create: (category, name, price, image_path) => ipcRenderer.invoke('menu:create', { category, name, price, image_path }),
+    delete: (id) => ipcRenderer.invoke('menu:delete', { id })
   },
   orders: {
     create: (tableId, channel, orderType, customerRef) =>
@@ -24,6 +29,8 @@ const api = {
       ipcRenderer.invoke('order:setFlag', { orderId, flag }),
     checkout: (orderId, tableId, paymentMethod, cashReceived, changeGiven, discountType, discountValue) =>
       ipcRenderer.invoke('order:checkout', { orderId, tableId, paymentMethod, cashReceived, changeGiven, discountType, discountValue }),
+    splitPay: (orderId, tableId, selectedItems, paymentMethod, cashReceived, changeGiven, discountType, discountValue) =>
+      ipcRenderer.invoke('order:splitPay', { orderId, tableId, selectedItems, paymentMethod, cashReceived, changeGiven, discountType, discountValue }),
     cancel: (orderId, tableId) =>
       ipcRenderer.invoke('order:cancel', { orderId, tableId })
   },
@@ -36,7 +43,9 @@ const api = {
   settings: {
     get: (key) => ipcRenderer.invoke('settings:get', { key }),
     set: (key, value) => ipcRenderer.invoke('settings:set', { key, value }),
-    getAll: () => ipcRenderer.invoke('settings:getAll')
+    getAll: () => ipcRenderer.invoke('settings:getAll'),
+    setSuperuserPin: (pin) => ipcRenderer.invoke('settings:setSuperuserPin', { pin }),
+    verifySuperuserPin: (pin) => ipcRenderer.invoke('settings:verifySuperuserPin', { pin })
   },
   attendance: {
     listStaff: () => ipcRenderer.invoke('attendance:listStaff'),

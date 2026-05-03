@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
-import { UtensilsCrossed, Settings, BarChart3 } from 'lucide-react'
+import { UtensilsCrossed, Settings, BarChart3, Edit } from 'lucide-react'
 import DashboardTabs from './components/Dashboard/DashboardTabs'
 import OrderView from './components/Layout/OrderView'
 import DailySummary from './components/DailySummary/DailySummary'
 import AttendanceAdmin from './components/AttendanceAdmin/AttendanceAdmin'
+import MenuEditor from './components/MenuEditor/MenuEditor'
+import SuperuserPinModal from './components/MenuEditor/SuperuserPinModal'
 import OrderTypeModal from './components/OrderTypeModal/OrderTypeModal'
 import useTableStore from './store/useTableStore'
 import useMenuStore from './store/useMenuStore'
 import useOrderStore from './store/useOrderStore'
 
 function App() {
-  // 'dashboard' | 'orderView' | 'dailySummary' | 'attendanceAdmin'
+  // 'dashboard' | 'orderView' | 'dailySummary' | 'attendanceAdmin' | 'menuEditor'
   const [view, setView] = useState('dashboard')
+  const [showPinModal, setShowPinModal] = useState(false)
 
   // When non-null, the OrderTypeModal is visible (WhatsApp / Delivery only).
   // Shape: { channel: 'whatsapp'|'delivery', context: string }
@@ -113,6 +116,14 @@ function App() {
         <div className="flex items-center gap-3">
           <span className="text-cream-300 text-sm">{tables.length} Tables</span>
           <button
+            onClick={() => setShowPinModal(true)}
+            title="Menu Editor"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-cream-300 hover:text-cream-50 hover:bg-ink-200 transition-colors text-sm font-medium"
+          >
+            <Edit size={16} />
+            <span>Menu</span>
+          </button>
+          <button
             onClick={() => setView('dailySummary')}
             title="Daily Summary"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-cream-300 hover:text-cream-50 hover:bg-ink-200 transition-colors text-sm font-medium"
@@ -143,7 +154,19 @@ function App() {
         {view === 'orderView' && <OrderView onBack={handleBack} />}
         {view === 'dailySummary' && <DailySummary onBack={() => setView('dashboard')} />}
         {view === 'attendanceAdmin' && <AttendanceAdmin onBack={() => setView('dashboard')} />}
+        {view === 'menuEditor' && <MenuEditor onBack={() => setView('dashboard')} />}
       </main>
+
+      {/* PIN Modal for Menu Editor */}
+      {showPinModal && (
+        <SuperuserPinModal
+          onSuccess={() => {
+            setShowPinModal(false)
+            setView('menuEditor')
+          }}
+          onCancel={() => setShowPinModal(false)}
+        />
+      )}
 
       {/* Order-type selection modal */}
       {pendingSetup && (

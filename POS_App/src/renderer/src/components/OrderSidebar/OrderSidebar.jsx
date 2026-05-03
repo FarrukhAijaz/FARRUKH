@@ -4,7 +4,7 @@ import useOrderStore from '../../store/useOrderStore'
 import useTableStore, { STATUS_CONFIG } from '../../store/useTableStore'
 import { formatModifier, groupModifiers } from '../../config/menuModifiers'
 
-function OrderSidebar({ onPunch, onInterimBill, onCheckout }) {
+function OrderSidebar({ onPunch, onInterimBill, onCheckout, onSplitPay }) {
   const { currentOrder, specialInstructions, setSpecialInstructions, cancelItem } =
     useOrderStore()
   const { getSelectedTable } = useTableStore()
@@ -14,7 +14,7 @@ function OrderSidebar({ onPunch, onInterimBill, onCheckout }) {
   const table = currentOrder?.table_id ? getSelectedTable() : null
   const cfg = table ? STATUS_CONFIG[table.status] || STATUS_CONFIG.empty : STATUS_CONFIG.empty
   const items = currentOrder?.items || []
-  const activeItems = items.filter((i) => !i.cancelled)
+  const activeItems = items.filter((i) => !i.cancelled && !i.split_paid)
   const total = currentOrder?.total_amount || 0
 
   // Workflow gates
@@ -75,6 +75,8 @@ function OrderSidebar({ onPunch, onInterimBill, onCheckout }) {
               className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-opacity ${
                 item.cancelled
                   ? 'bg-red-900/20 border border-red-800/30 opacity-60'
+                  : item.split_paid
+                  ? 'bg-forest-900/20 border border-forest-700/30 opacity-50'
                   : 'bg-ink-200'
               }`}
             >
@@ -85,9 +87,14 @@ function OrderSidebar({ onPunch, onInterimBill, onCheckout }) {
                       [CANCELLED]
                     </span>
                   )}
+                  {item.split_paid && (
+                    <span className="text-forest-400 text-xs font-black tracking-wider shrink-0">
+                      [PAID]
+                    </span>
+                  )}
                   <p
                     className={`text-sm font-medium truncate ${
-                      item.cancelled ? 'text-cream-100/40 line-through' : 'text-cream-100'
+                      item.cancelled || item.split_paid ? 'text-cream-100/40 line-through' : 'text-cream-100'
                     }`}
                   >
                     {item.name}
@@ -111,21 +118,21 @@ function OrderSidebar({ onPunch, onInterimBill, onCheckout }) {
                     ))}
                   </ul>
                 )}
-                <p className={`text-xs ${item.cancelled ? 'text-cream-300/30' : 'text-cream-300'}`}>
+                <p className={`text-xs ${item.cancelled || item.split_paid ? 'text-cream-300/30' : 'text-cream-300'}`}>
                   {item.qty} × ₺{item.price.toFixed(2)}
                 </p>
               </div>
-              {!item.cancelled && (
+              {!item.cancelled && !item.split_paid && (
                 <span className="text-forest-400 text-sm font-bold tabular-nums shrink-0">
                   ₺{(item.qty * item.price).toFixed(2)}
                 </span>
               )}
               <button
-                onClick={() => !item.cancelled && cancelItem(item.id)}
-                disabled={item.cancelled}
-                title={item.cancelled ? 'Already cancelled' : 'Cancel item'}
+                onClick={() => !item.cancelled && !item.split_paid && cancelItem(item.id)}
+                disabled={item.cancelled || item.split_paid}
+                title={item.cancelled ? 'Already cancelled' : item.split_paid ? 'Already paid' : 'Cancel item'}
                 className={`ml-1 transition-colors ${
-                  item.cancelled
+                  item.cancelled || item.split_paid
                     ? 'text-cream-100/10 cursor-not-allowed'
                     : 'text-cream-100/30 hover:text-red-400'
                 }`}
@@ -194,6 +201,18 @@ function OrderSidebar({ onPunch, onInterimBill, onCheckout }) {
             {actionLoading === 'checkout' ? 'Closing…' : 'Checkout'}
           </button>
         </div>
+
+        {/* Split Pay — available any time after kitchen sent, regardless of interim bill */}
+        {kitchenSent && activeItems.length > 0 && (
+          <button
+            onClick={() => handleAction('splitpay', onSplitPay)}
+            disabled={actionLoading !== null}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm bg-amber-700 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-cream-50 transition-colors"
+          >
+            <Receipt size={16} />
+            {actionLoading === 'splitpay' ? 'Opening…' : 'Split Pay'}
+          </button>
+        )}
 
         {/* Workflow hint */}
         {activeItems.length > 0 && (!kitchenSent || !billPrinted) && (

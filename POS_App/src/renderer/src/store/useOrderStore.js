@@ -119,7 +119,15 @@ const useOrderStore = create((set, get) => ({
     return currentOrder.items.find((i) => i.id === menuItemId && !i.cancelled)?.qty || 0
   },
 
-  clearOrder: () => set({ currentOrder: null, specialInstructions: '' })
+  clearOrder: () => set({ currentOrder: null, specialInstructions: '' }),
+
+  // Refresh in-memory order from a server-returned order object (used after split pay)
+  updateOrderFromServer: (order) => {
+    set({
+      currentOrder: { ...order, items: parseItems(order.items) },
+      specialInstructions: order.special_instructions || ''
+    })
+  }
 }))
 
 export default useOrderStore

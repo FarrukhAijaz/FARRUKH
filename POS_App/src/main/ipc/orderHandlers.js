@@ -154,6 +154,118 @@ function registerOrderHandlers() {
     return { success: true, paymentId, discountAmount, finalAmount }
   })
 
+  // Partial / split payment — pays for selected items (with per-item qty), keeps order open with remaining items
+  ipcMain.handle('order:splitPay', (_, { orderId, tableId, selectedItems, paymentMethod, cashReceived, changeGiven, discountType, discountValue }) => {
+    const db = getDatabase()
+    const now = new Date().toISOString()
+
+    const order = db.get('orders').find({ id: orderId }).value()
+    if (!order) return { success: false, error: 'Order not found' }
+
+    const table = tableId ? db.get('tables').find({ id: tableId }).value() : null
+
+    // Build a lookup: item id → qty being paid now
+    const selMap = {}
+    for (const s of (selectedItems || [])) selMap[s.id] = s.qty
+
+    const rawItems = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || [])
+
+    // Process each item: split row when only partial qty is paid
+    const updatedItems = []
+    for (const item of rawItems) {
+      if (item.cancelled || item.split_paid) {
+        updatedItems.push(item)
+        continue
+      }
+      const payingQty = selMap[item.id] || 0
+      if (payingQty <= 0) {
+        updatedItems.push(item) // unchanged
+      } else if (payingQty >= item.qty) {
+        // Pay all of this item
+        updatedItems.push({ ...item, split_paid: true })
+      } else {
+        // Partial — split into a paid row and a remaining row
+        updatedItems.push({ ...item, qty: payingQty, split_paid: true })
+        updatedItems.push({ ...item, qty: item.qty - payingQty, split_paid: false })
+      }
+    }
+
+    // Split subtotal = sum of what we're paying now
+    const splitSubtotal = (selectedItems || []).reduce((sum, s) => {
+      const orig = rawItems.find((i) => i.id === s.id)
+      return sum + (orig ? orig.price * s.qty : 0)
+    }, 0)
+
+    // Apply optional discount on the split subtotal
+    let discountAmount = 0
+    const dVal = parseFloat(discountValue) || 0
+    if (dVal > 0) {
+      if (discountType === 'percent') {
+        discountAmount = parseFloat(((splitSubtotal * Math.min(dVal, 100)) / 100).toFixed(2))
+      } else {
+        discountAmount = parseFloat(Math.min(dVal, splitSubtotal).toFixed(2))
+      }
+    }
+    const finalAmount = parseFloat((splitSubtotal - discountAmount).toFixed(2))
+
+    // Recalculate order total — only remaining (non-cancelled, non-split_paid) items
+    const newTotal = updatedItems
+      .filter((i) => !i.cancelled && !i.split_paid)
+      .reduce((sum, i) => sum + i.price * i.qty, 0)
+
+    db.get('orders').find({ id: orderId }).assign({
+      items: updatedItems,
+      total_amount: newTotal,
+      updated_at: now
+    }).write()
+
+    // Record split payment
+    const paymentId = db.get('_counters.payments').value() + 1
+    db.set('_counters.payments', paymentId).write()
+    const channelLabel =
+      order.channel && order.channel !== 'dine_in'
+        ? order.channel.charAt(0).toUpperCase() + order.channel.slice(1)
+        : null
+    db.get('payments').push({
+      id: paymentId,
+      order_id: orderId,
+      table_id: tableId || null,
+      table_name: table ? table.name : (channelLabel || `Order ${orderId}`),
+      channel: order.channel || 'dine_in',
+      order_type: order.order_type || 'dine_in',
+      customer_ref: order.customer_ref || null,
+      subtotal: splitSubtotal,
+      discount_type: discountType || null,
+      discount_value: dVal || null,
+      discount_amount: discountAmount,
+      amount: finalAmount,
+      payment_method: paymentMethod || 'cash',
+      cash_received: cashReceived || null,
+      change_given: changeGiven || null,
+      is_split: true,
+      business_date: getBusinessDate(),
+      paid_at: now
+    }).write()
+
+    const updatedOrder = db.get('orders').find({ id: orderId }).value()
+
+    // If no active items remain, auto-close the order and free the table
+    const remainingActive = updatedItems.filter((i) => !i.cancelled && !i.split_paid)
+    let orderClosed = false
+    if (remainingActive.length === 0) {
+      db.get('orders').find({ id: orderId }).assign({
+        status: 'paid',
+        updated_at: now
+      }).write()
+      if (tableId) {
+        db.get('tables').find({ id: tableId }).assign({ current_order_id: null, status: 'empty' }).write()
+      }
+      orderClosed = true
+    }
+
+    return { success: true, paymentId, finalAmount, newTotal, order: updatedOrder, orderClosed }
+  })
+
   // Cancel an order that was opened but had no items added
   ipcMain.handle('order:cancel', (_, { orderId, tableId }) => {
     const db = getDatabase()

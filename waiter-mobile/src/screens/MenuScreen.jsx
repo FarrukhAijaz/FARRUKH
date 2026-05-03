@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react'
+import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react'
 import {
   View,
   Text,
@@ -11,7 +11,9 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native'
+import { useFocusEffect } from '@react-navigation/native'
 import useAppStore from '../store/useAppStore'
+import { getBaseURL } from '../api'
 import menuImages from '../menuImages'
 import { needsModifier, formatModifier } from '../config/menuModifiers'
 import ItemModifierModal from '../components/ItemModifierModal'
@@ -48,6 +50,14 @@ function CategoryTab({ label, selected, onPress }) {
 
 function ItemCard({ item, cartQty, onAdd, onRemove, hasModifier }) {
   const localImage = item.image_path ? menuImages[item.image_path] : null
+  const isOutOfStock = item.in_stock === 0
+  // Cache-bust hash so updated images are refetched
+  // Use updated_at/created_at if available, otherwise fall back to path hash
+  const pathHash = item.image_path
+    ? Math.abs(item.image_path.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0))
+        .toString(36).slice(-6)
+    : ''
+  const cacheKey = item.updated_at || item.created_at || pathHash
 
   return (
     <View
@@ -63,6 +73,7 @@ function ItemCard({ item, cartQty, onAdd, onRemove, hasModifier }) {
         shadowOpacity: 0.04,
         shadowRadius: 4,
         elevation: 1,
+        opacity: isOutOfStock ? 0.6 : 1,
       }}
     >
       {/* Image or emoji placeholder */}
@@ -72,9 +83,40 @@ function ItemCard({ item, cartQty, onAdd, onRemove, hasModifier }) {
           style={{ width: '100%', height: 90 }}
           resizeMode="cover"
         />
+      ) : item.image_path && item.image_path.startsWith('/') ? (
+        // HTTP image for uploaded images — always via Express server with cache-bust
+        <Image
+          source={{ uri: `${getBaseURL()}${item.image_path}?v=${encodeURIComponent(cacheKey)}` }}
+          style={{ width: '100%', height: 90 }}
+          resizeMode="cover"
+        />
       ) : (
         <View style={{ width: '100%', height: 90, backgroundColor: '#f3f0e8', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 36 }}>{item.image_path && !item.image_path.startsWith('/') ? item.image_path : '🍽️'}</Text>
+        </View>
+      )}
+
+      {/* Out of Stock overlay */}
+      {isOutOfStock && (
+        <View
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#dc2626',
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 12,
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>OUT OF STOCK</Text>
+          </View>
         </View>
       )}
 
@@ -93,7 +135,8 @@ function ItemCard({ item, cartQty, onAdd, onRemove, hasModifier }) {
             <>
               <TouchableOpacity
                 onPress={onRemove}
-                style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center' }}
+                disabled={isOutOfStock}
+                style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center', opacity: isOutOfStock ? 0.5 : 1 }}
               >
                 <Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 16, lineHeight: 18 }}>−</Text>
               </TouchableOpacity>
@@ -108,8 +151,9 @@ function ItemCard({ item, cartQty, onAdd, onRemove, hasModifier }) {
             </Text>
           )}
           <TouchableOpacity
-            onPress={onAdd}
-            style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#2d5a2d', alignItems: 'center', justifyContent: 'center' }}
+            onPress={() => !isOutOfStock && onAdd()}
+            disabled={isOutOfStock}
+            style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: isOutOfStock ? '#d1d5db' : '#2d5a2d', alignItems: 'center', justifyContent: 'center' }}
           >
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, lineHeight: 18 }}>+</Text>
           </TouchableOpacity>
@@ -135,15 +179,34 @@ export default function MenuScreen({ navigation }) {
     punchLoading,
     punchError,
     loadTables,
+    refreshMenu,
   } = useAppStore()
 
   const [pendingItem, setPendingItem] = useState(null)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const handleRefreshMenu = async () => {
+    setRefreshing(true)
+    try {
+      await refreshMenu()
+    } catch (err) {
+      console.error('Failed to refresh menu:', err)
+    }
+    setRefreshing(false)
+  }
 
   // Poll every 8 seconds so this waiter sees if another waiter punches the same table
   useEffect(() => {
     const id = setInterval(loadTables, 8000)
     return () => clearInterval(id)
   }, [])
+
+  // Refresh menu when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refreshMenu()
+    }, [refreshMenu])
+  )
 
   const statusStyle = STATUS_STYLE[selectedTable?.status] || STATUS_STYLE.empty
   const existingOrder = selectedTable?.current_order
@@ -195,6 +258,13 @@ export default function MenuScreen({ navigation }) {
               {selectedTable?.name}
             </Text>
           </View>
+          <TouchableOpacity
+            onPress={handleRefreshMenu}
+            disabled={refreshing}
+            style={{ marginRight: 12, opacity: refreshing ? 0.5 : 1 }}
+          >
+            <Text style={{ color: '#a8d5a8', fontSize: 18, fontWeight: '300' }}>⟳</Text>
+          </TouchableOpacity>
           <View style={{ backgroundColor: statusStyle.badge, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 }}>
             <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{statusStyle.label}</Text>
           </View>

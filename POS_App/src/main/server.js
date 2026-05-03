@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import { app as electronApp } from 'electron'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { getDatabase, getBusinessDate } from './db/index.js'
@@ -53,10 +54,19 @@ export function startServer(mainWindow) {
   app.use(cors())
   app.use(express.json())
 
-  // Serve menu images so the waiter mobile app can load them
-  // Resolves to src/renderer/public/ in dev, out/renderer/ in production
-  const publicDir = join(__dirname, '../../renderer/public')
-  app.use(express.static(publicDir))
+  // Serve seed menu images.
+  // electronApp.getAppPath() always returns the project root (works in both dev and prod).
+  // In dev:  POS_App/                  → src/renderer/public exists
+  // In prod: POS_App/                  → resources/app.asar exists, but images are in out/renderer
+  const appRoot = electronApp.getAppPath()
+  const seedPublicDir = join(appRoot, 'src', 'renderer', 'public')
+  const seedPublicDirProd = join(appRoot, '..', 'renderer', 'public')
+  const uploadedPublicDir = join(electronApp.getPath('userData'), 'public')
+  console.log('[Server] Serving seed images from:', seedPublicDir)
+  console.log('[Server] Serving uploaded images from:', uploadedPublicDir)
+  app.use(express.static(seedPublicDir))
+  app.use(express.static(seedPublicDirProd))
+  app.use(express.static(uploadedPublicDir))
 
   // ── GET /api/menu ──────────────────────────────────────────────────────────
   app.get('/api/menu', (req, res) => {

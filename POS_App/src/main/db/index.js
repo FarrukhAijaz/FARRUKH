@@ -92,56 +92,56 @@ function getDatabase() {
     if (db.get('menu_items').value().length === 0) {
       const items = [
         // ── Palate Teasers ────────────────────────────────────────
-        { id:  1, name: 'Samosa',                              category: 'Palate Teasers',     price: 110,  image_path: '/menu/appetizers/samosa.jpg' },
-        { id:  2, name: 'French Fries',                        category: 'Palate Teasers',     price: 90,   image_path: '/menu/appetizers/french-fries.jpg' },
-        { id:  3, name: 'Samosa Chaat',                        category: 'Palate Teasers',     price: 150,  image_path: '/menu/appetizers/samosa-chaat.jpg' },
-        { id:  4, name: 'Pani Puri',                           category: 'Palate Teasers',     price: 180,  image_path: '/menu/appetizers/pani-puri.jpg' },
-        { id:  5, name: 'Garlic Mayo Fries',                   category: 'Palate Teasers',     price: 120,  image_path: '/menu/appetizers/garlic-mayo-fries.jpg' },
+        { id:  1, name: 'Samosa',                              category: 'Palate Teasers',     price: 110,  image_path: '/menu/appetizers/samosa.jpg', in_stock: 1 },
+        { id:  2, name: 'French Fries',                        category: 'Palate Teasers',     price: 90,   image_path: '/menu/appetizers/french-fries.jpg', in_stock: 1 },
+        { id:  3, name: 'Samosa Chaat',                        category: 'Palate Teasers',     price: 150,  image_path: '/menu/appetizers/samosa-chaat.jpg', in_stock: 1 },
+        { id:  4, name: 'Pani Puri',                           category: 'Palate Teasers',     price: 180,  image_path: '/menu/appetizers/pani-puri.jpg', in_stock: 1 },
+        { id:  5, name: 'Garlic Mayo Fries',                   category: 'Palate Teasers',     price: 120,  image_path: '/menu/appetizers/garlic-mayo-fries.jpg', in_stock: 1 },
 
         // ── Heart of the Feast ────────────────────────────────────
-        { id:  6, name: 'Biryani',                             category: 'Heart of the Feast', price: 340,  image_path: '/menu/main-course/biryani.jpg' },
-        { id:  7, name: 'Mandi',                               category: 'Heart of the Feast', price: 385,  image_path: '/menu/main-course/mandi.jpg' },
-        { id:  8, name: 'Butter Chicken',                      category: 'Heart of the Feast', price: 385,  image_path: '/menu/main-course/butter-chicken.jpg' },
-        { id:  9, name: "Chef's Daily Special",                category: 'Heart of the Feast', price: 250,  image_path: '/menu/main-course/chefs-special.jpg' },
-        { id: 10, name: 'Beef Karahi 1kg (3–4 ppl)',           category: 'Heart of the Feast', price: 3200, image_path: '/menu/main-course/beef-karahi.jpg' },
-        { id: 11, name: 'Beef Karahi ½kg (2–3 ppl)',           category: 'Heart of the Feast', price: 1800, image_path: '/menu/main-course/beef-karahi.jpg' },
-        { id: 12, name: 'Beef Laccha Paratha Burger',          category: 'Heart of the Feast', price: 495,  image_path: '/menu/main-course/beef-laccha-burger.jpg' },
-        { id: 13, name: 'Chicken Laccha Paratha Burger',       category: 'Heart of the Feast', price: 290,  image_path: '/menu/main-course/chicken-laccha-burger.jpg' },
+        { id:  6, name: 'Biryani',                             category: 'Heart of the Feast', price: 340,  image_path: '/menu/main-course/biryani.jpg', in_stock: 1 },
+        { id:  7, name: 'Mandi',                               category: 'Heart of the Feast', price: 385,  image_path: '/menu/main-course/mandi.jpg', in_stock: 1 },
+        { id:  8, name: 'Butter Chicken',                      category: 'Heart of the Feast', price: 385,  image_path: '/menu/main-course/butter-chicken.jpg', in_stock: 1 },
+        { id:  9, name: "Chef's Daily Special",                category: 'Heart of the Feast', price: 250,  image_path: '/menu/main-course/chefs-special.jpg', in_stock: 1 },
+        { id: 10, name: 'Beef Karahi 1kg (3–4 ppl)',           category: 'Heart of the Feast', price: 3200, image_path: '/menu/main-course/beef-karahi.jpg', in_stock: 1 },
+        { id: 11, name: 'Beef Karahi ½kg (2–3 ppl)',           category: 'Heart of the Feast', price: 1800, image_path: '/menu/main-course/beef-karahi.jpg', in_stock: 1 },
+        { id: 12, name: 'Beef Laccha Paratha Burger',          category: 'Heart of the Feast', price: 495,  image_path: '/menu/main-course/beef-laccha-burger.jpg', in_stock: 1 },
+        { id: 13, name: 'Chicken Laccha Paratha Burger',       category: 'Heart of the Feast', price: 290,  image_path: '/menu/main-course/chicken-laccha-burger.jpg', in_stock: 1 },
 
         // ── Ancient Flames ────────────────────────────────────────
-        { id: 14, name: 'Plain Naan',                          category: 'Ancient Flames',     price: 55,   image_path: '/menu/hot-tandoor/plain-naan.jpg' },
-        { id: 15, name: 'Garlic Naan',                         category: 'Ancient Flames',     price: 65,   image_path: '/menu/hot-tandoor/garlic-naan.jpg' },
-        { id: 16, name: 'Garlic Cheese Naan',                  category: 'Ancient Flames',     price: 170,  image_path: '/menu/hot-tandoor/garlic-cheese-naan.jpg' },
-        { id: 17, name: 'Plain Paratha',                       category: 'Ancient Flames',     price: 45,   image_path: '/menu/hot-tandoor/plain-paratha.jpg' },
-        { id: 18, name: 'Aloo Paratha',                        category: 'Ancient Flames',     price: 120,  image_path: '/menu/hot-tandoor/aloo-paratha.jpg' },
-        { id: 19, name: 'Chicken Cheese Paratha',              category: 'Ancient Flames',     price: 180,  image_path: '/menu/hot-tandoor/chicken-cheese-paratha.jpg' },
-        { id: 20, name: 'Laccha Paratha',                      category: 'Ancient Flames',     price: 0,    image_path: '/menu/hot-tandoor/laccha-paratha.jpg' },
-        { id: 21, name: 'Roti',                                category: 'Ancient Flames',     price: 40,   image_path: '/menu/hot-tandoor/roti.jpg' },
+        { id: 14, name: 'Plain Naan',                          category: 'Ancient Flames',     price: 55,   image_path: '/menu/hot-tandoor/plain-naan.jpg', in_stock: 1 },
+        { id: 15, name: 'Garlic Naan',                         category: 'Ancient Flames',     price: 65,   image_path: '/menu/hot-tandoor/garlic-naan.jpg', in_stock: 1 },
+        { id: 16, name: 'Garlic Cheese Naan',                  category: 'Ancient Flames',     price: 170,  image_path: '/menu/hot-tandoor/garlic-cheese-naan.jpg', in_stock: 1 },
+        { id: 17, name: 'Plain Paratha',                       category: 'Ancient Flames',     price: 45,   image_path: '/menu/hot-tandoor/plain-paratha.jpg', in_stock: 1 },
+        { id: 18, name: 'Aloo Paratha',                        category: 'Ancient Flames',     price: 120,  image_path: '/menu/hot-tandoor/aloo-paratha.jpg', in_stock: 1 },
+        { id: 19, name: 'Chicken Cheese Paratha',              category: 'Ancient Flames',     price: 180,  image_path: '/menu/hot-tandoor/chicken-cheese-paratha.jpg', in_stock: 1 },
+        { id: 20, name: 'Laccha Paratha',                      category: 'Ancient Flames',     price: 0,    image_path: '/menu/hot-tandoor/laccha-paratha.jpg', in_stock: 1 },
+        { id: 21, name: 'Roti',                                category: 'Ancient Flames',     price: 40,   image_path: '/menu/hot-tandoor/roti.jpg', in_stock: 1 },
 
         // ── The Sizzling Grate ────────────────────────────────────
-        { id: 22, name: 'Reshmi Kebab',                        category: 'The Sizzling Grate', price: 295, image_path: '/menu/sizzling-bbq/reshmi-kebab.jpg' },
-        { id: 23, name: 'Chicken Tikka',                       category: 'The Sizzling Grate', price: 285, image_path: '/menu/sizzling-bbq/chicken-tikka.jpg' },
-        { id: 24, name: 'Malai Boti',                          category: 'The Sizzling Grate', price: 350, image_path: '/menu/sizzling-bbq/malai-boti.jpg' },
-        { id: 25, name: 'Chicken Tikka Boti',                  category: 'The Sizzling Grate', price: 330, image_path: '/menu/sizzling-bbq/chicken-tikka-boti.jpg' },
+        { id: 22, name: 'Reshmi Kebab',                        category: 'The Sizzling Grate', price: 295, image_path: '/menu/sizzling-bbq/reshmi-kebab.jpg', in_stock: 1 },
+        { id: 23, name: 'Chicken Tikka',                       category: 'The Sizzling Grate', price: 285, image_path: '/menu/sizzling-bbq/chicken-tikka.jpg', in_stock: 1 },
+        { id: 24, name: 'Malai Boti',                          category: 'The Sizzling Grate', price: 350, image_path: '/menu/sizzling-bbq/malai-boti.jpg', in_stock: 1 },
+        { id: 25, name: 'Chicken Tikka Boti',                  category: 'The Sizzling Grate', price: 330, image_path: '/menu/sizzling-bbq/chicken-tikka-boti.jpg', in_stock: 1 },
 
         // ── Liquid Alchemy ────────────────────────────────────────
-        { id: 26, name: 'Chai',                                category: 'Liquid Alchemy',     price: 65,  image_path: '/menu/drinks/chai.jpg' },
-        { id: 27, name: 'Lassi',                               category: 'Liquid Alchemy',     price: 110, image_path: '/menu/drinks/lassi.jpg' },
-        { id: 28, name: 'Iced Tea',                            category: 'Liquid Alchemy',     price: 65,  image_path: '/menu/drinks/iced-tea.jpg' },
-        { id: 29, name: 'Mint Margarita',                      category: 'Liquid Alchemy',     price: 75,  image_path: '/menu/drinks/mint-margarita.jpg' },
-        { id: 30, name: 'Banana Milkshake',                    category: 'Liquid Alchemy',     price: 120, image_path: '/menu/drinks/banana-milkshake.jpg' },
-        { id: 31, name: 'Season Special (Strawberry/Peach)',   category: 'Liquid Alchemy',     price: 125, image_path: '/menu/drinks/season-special.jpg' },
+        { id: 26, name: 'Chai',                                category: 'Liquid Alchemy',     price: 65,  image_path: '/menu/drinks/chai.jpg', in_stock: 1 },
+        { id: 27, name: 'Lassi',                               category: 'Liquid Alchemy',     price: 110, image_path: '/menu/drinks/lassi.jpg', in_stock: 1 },
+        { id: 28, name: 'Iced Tea',                            category: 'Liquid Alchemy',     price: 65,  image_path: '/menu/drinks/iced-tea.jpg', in_stock: 1 },
+        { id: 29, name: 'Mint Margarita',                      category: 'Liquid Alchemy',     price: 75,  image_path: '/menu/drinks/mint-margarita.jpg', in_stock: 1 },
+        { id: 30, name: 'Banana Milkshake',                    category: 'Liquid Alchemy',     price: 120, image_path: '/menu/drinks/banana-milkshake.jpg', in_stock: 1 },
+        { id: 31, name: 'Season Special (Strawberry/Peach)',   category: 'Liquid Alchemy',     price: 125, image_path: '/menu/drinks/season-special.jpg', in_stock: 1 },
 
         // ── Brainy Bites ──────────────────────────────────────────
-        { id: 32, name: 'Cinnamon Rolls',                      category: 'Brainy Bites', price: 330, image_path: '🥐' },
-        { id: 33, name: 'Brownies',                            category: 'Brainy Bites', price: 330, image_path: '🍫' },
-        { id: 34, name: 'Tom & Jerry Soufflé Cake',            category: 'Brainy Bites', price: 330, image_path: '🎂' },
-        { id: 35, name: 'Carrot Cake',                         category: 'Brainy Bites', price: 330, image_path: '🥕' },
+        { id: 32, name: 'Cinnamon Rolls',                      category: 'Brainy Bites', price: 330, image_path: '🥐', in_stock: 1 },
+        { id: 33, name: 'Brownies',                            category: 'Brainy Bites', price: 330, image_path: '🍫', in_stock: 1 },
+        { id: 34, name: 'Tom & Jerry Soufflé Cake',            category: 'Brainy Bites', price: 330, image_path: '🎂', in_stock: 1 },
+        { id: 35, name: 'Carrot Cake',                         category: 'Brainy Bites', price: 330, image_path: '🥕', in_stock: 1 },
 
         // ── Shared Journeys (cheapest → most expensive) ───────────
         {
           id: 40, name: 'Laccha Burger Combo', category: 'Shared Journeys', price: 900,
-          image_path: '/menu/deals/laccha-burger-combo.jpg',
+          image_path: '/menu/deals/laccha-burger-combo.jpg', in_stock: 1,
           deal_items: [
             { qty: 2, name: 'Chicken Laccha Paratha Burger' },
             { qty: 1, name: 'Garlic Mayo Fries' },
@@ -151,7 +151,7 @@ function getDatabase() {
         },
         {
           id: 41, name: 'Mandi Fiesta', category: 'Shared Journeys', price: 1150,
-          image_path: '/menu/deals/mandi-fiesta.jpg',
+          image_path: '/menu/deals/mandi-fiesta.jpg', in_stock: 1,
           deal_items: [
             { qty: 2, name: 'Chicken Mandi' },
             { qty: 2, name: 'Drinks (Chai / Mint Margarita / Iced Tea)' },
@@ -160,7 +160,7 @@ function getDatabase() {
         },
         {
           id: 42, name: 'Friends Combo', category: 'Shared Journeys', price: 1265,
-          image_path: '/menu/deals/friends-combo.jpg',
+          image_path: '/menu/deals/friends-combo.jpg', in_stock: 1,
           deal_items: [
             { qty: 1, name: 'Samosa' },
             { qty: 2, name: 'Biryani' },
@@ -170,7 +170,7 @@ function getDatabase() {
         },
         {
           id: 43, name: 'BBQ Platter', category: 'Shared Journeys', price: 1450,
-          image_path: '/menu/deals/bbq-platter.jpg',
+          image_path: '/menu/deals/bbq-platter.jpg', in_stock: 1,
           deal_items: [
             { qty: 2, name: 'Reshmi Kebab' },
             { qty: 2, name: 'Chicken Tikka' },
@@ -196,8 +196,10 @@ function getDatabase() {
     let needsWrite = false
     const migrated = allItems.map((item) => {
       const newCat = CATEGORY_RENAMES[item.category]
-      if (newCat) { needsWrite = true; return { ...item, category: newCat } }
-      return item
+      const updated = newCat ? { ...item, category: newCat } : item
+      // Ensure in_stock field exists (add if missing)
+      if (updated.in_stock === undefined) { needsWrite = true; return { ...updated, in_stock: 1 } }
+      return updated
     })
     if (needsWrite) db.set('menu_items', migrated).write()
 

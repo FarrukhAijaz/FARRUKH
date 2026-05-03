@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { ArrowLeft, UtensilsCrossed, ShoppingBag, MessageCircle, Truck } from 'lucide-react'
+import { ArrowLeft, RefreshCw, UtensilsCrossed, ShoppingBag, MessageCircle, Truck } from 'lucide-react'
 import MenuGrid from '../MenuGrid/MenuGrid'
 import OrderSidebar from '../OrderSidebar/OrderSidebar'
 import CheckoutModal from '../CheckoutModal/CheckoutModal'
+import SplitPayModal from '../SplitPayModal/SplitPayModal'
 import useTableStore from '../../store/useTableStore'
+import useMenuStore from '../../store/useMenuStore'
 import useOrderStore from '../../store/useOrderStore'
 
 const CHANNEL_ICON = {
@@ -19,8 +21,11 @@ const ORDER_TYPE_LABEL = {
 
 function OrderView({ onBack }) {
   const { getSelectedTable, updateTableStatus, updateTableRecord } = useTableStore()
-  const { currentOrder, specialInstructions, clearOrder, markKitchenSent, markBillPrinted } = useOrderStore()
+  const { loadMenu } = useMenuStore()
+  const { currentOrder, specialInstructions, clearOrder, markKitchenSent, markBillPrinted, updateOrderFromServer } = useOrderStore()
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+  const [showSplitPayModal, setShowSplitPayModal] = useState(false)
+  const [isRefreshingMenu, setIsRefreshingMenu] = useState(false)
 
   const table = getSelectedTable()
 
@@ -66,6 +71,24 @@ function OrderView({ onBack }) {
     setShowCheckoutModal(true)
   }
 
+  const handleSplitPay = () => {
+    if (!currentOrder) return
+    setShowSplitPayModal(true)
+  }
+
+  const handleRefreshMenu = async () => {
+    console.log('[OrderView] Refreshing menu...')
+    setIsRefreshingMenu(true)
+    try {
+      await loadMenu()
+      console.log('[OrderView] Menu refresh complete')
+    } catch (err) {
+      console.error('[OrderView] Menu refresh failed:', err)
+    } finally {
+      setIsRefreshingMenu(false)
+    }
+  }
+
   const handleCheckoutConfirm = async ({ paymentMethod, cashReceived, changeGiven, discountType, discountValue }) => {
     if (!currentOrder) return
     await window.api.orders.updateItems(currentOrder.id, currentOrder.items, specialInstructions)
@@ -86,6 +109,35 @@ function OrderView({ onBack }) {
     onBack()
   }
 
+  const handleSplitPayConfirm = async ({ selectedItems, paymentMethod, cashReceived, changeGiven, discountType, discountValue }) => {
+    if (!currentOrder) return
+    // Save any pending item changes first
+    await window.api.orders.updateItems(currentOrder.id, currentOrder.items, specialInstructions)
+    const result = await window.api.orders.splitPay(
+      currentOrder.id,
+      table ? table.id : null,
+      selectedItems,
+      paymentMethod,
+      cashReceived,
+      changeGiven,
+      discountType,
+      discountValue
+    )
+    if (result?.success) {
+      if (result.orderClosed) {
+        // All items paid — close out just like a full checkout
+        if (table) updateTableStatus(table.id, 'empty')
+        clearOrder()
+        setShowSplitPayModal(false)
+        onBack()
+      } else if (result.order) {
+        // Remaining items still open — update local state
+        updateOrderFromServer(result.order)
+        setShowSplitPayModal(false)
+      }
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
@@ -102,6 +154,15 @@ function OrderView({ onBack }) {
         <h1 className="text-cream-100 font-bold text-base">
           {contextLabel}
         </h1>
+        <button
+          onClick={handleRefreshMenu}
+          disabled={isRefreshingMenu}
+          className="ml-auto flex items-center gap-1.5 text-cream-300 hover:text-cream-50 disabled:opacity-50 transition-colors"
+          title="Refresh Menu"
+        >
+          <RefreshCw size={16} className={isRefreshingMenu ? 'animate-spin' : ''} />
+          <span className="text-sm font-medium">Refresh Menu</span>
+        </button>
         {/* Order type badge */}
         <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-forest-600/30 text-forest-400">
           {ORDER_TYPE_LABEL[orderType] || orderType}
@@ -118,6 +179,7 @@ function OrderView({ onBack }) {
             onPunch={handlePunch}
             onInterimBill={handleInterimBill}
             onCheckout={handleCheckout}
+            onSplitPay={handleSplitPay}
           />
         </div>
       </div>
@@ -128,6 +190,15 @@ function OrderView({ onBack }) {
           table={table}
           onConfirm={handleCheckoutConfirm}
           onCancel={() => setShowCheckoutModal(false)}
+        />
+      )}
+
+      {showSplitPayModal && (
+        <SplitPayModal
+          order={currentOrder}
+          table={table}
+          onConfirm={handleSplitPayConfirm}
+          onCancel={() => setShowSplitPayModal(false)}
         />
       )}
     </div>

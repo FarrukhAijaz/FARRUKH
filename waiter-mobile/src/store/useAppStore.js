@@ -8,8 +8,16 @@ const CATEGORY_ORDER = [
   'Ancient Flames',
   'The Sizzling Grate',
   'Liquid Alchemy',
+  'Brainy Bites',
   'Shared Journeys',
 ]
+
+function deriveCategories(items) {
+  const found = new Set(items.map((item) => item.category))
+  return CATEGORY_ORDER.filter((category) => found.has(category))
+}
+
+let pollingInterval = null
 
 const useAppStore = create((set, get) => ({
   // Connection
@@ -45,8 +53,7 @@ const useAppStore = create((set, get) => ({
       setBaseURL(ip)
       const [menuRes, tablesRes] = await Promise.all([fetchMenu(), fetchTables()])
       const items = menuRes.data
-      const found = new Set(items.map((i) => i.category))
-      const cats = CATEGORY_ORDER.filter((c) => found.has(c))
+      const cats = deriveCategories(items)
       set({
         serverIp: ip,
         connected: true,
@@ -57,12 +64,48 @@ const useAppStore = create((set, get) => ({
         loading: false,
         connectError: '',
       })
+
+      // Start polling menu every 15 seconds
+      if (pollingInterval) clearInterval(pollingInterval)
+      pollingInterval = setInterval(async () => {
+        try {
+          const res = await fetchMenu()
+          const items = res.data
+          const categories = deriveCategories(items)
+          set((state) => ({
+            menu: items,
+            categories,
+            selectedCategory: categories.includes(state.selectedCategory)
+              ? state.selectedCategory
+              : categories[0] || ''
+          }))
+        } catch (err) {
+          // Silently fail polling - don't interrupt user experience
+        }
+      }, 15000)
     } catch (err) {
       set({
         connected: false,
         loading: false,
         connectError: err.message || 'Cannot reach server',
       })
+    }
+  },
+
+  refreshMenu: async () => {
+    try {
+      const res = await fetchMenu()
+      const items = res.data
+      const categories = deriveCategories(items)
+      set((state) => ({
+        menu: items,
+        categories,
+        selectedCategory: categories.includes(state.selectedCategory)
+          ? state.selectedCategory
+          : categories[0] || ''
+      }))
+    } catch (_) {
+      // Silently fail
     }
   },
 
@@ -143,8 +186,9 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  disconnect: () =>
-    set({
+  disconnect: () => {
+    if (pollingInterval) clearInterval(pollingInterval)
+    return set({
       connected: false,
       serverIp: '',
       tables: [],
@@ -152,7 +196,8 @@ const useAppStore = create((set, get) => ({
       categories: [],
       cart: [],
       selectedTable: null,
-    }),
+    })
+  },
 }))
 
 export default useAppStore

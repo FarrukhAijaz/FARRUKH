@@ -28,14 +28,14 @@ done
 echo "Cleaning build output..."
 rm -rf out/
 
-# --fresh: wipe the database so the app starts with zero orders and clean table states
+# --fresh: wipe all generated user data so the app starts from a clean seed state
 if [[ "$FRESH" == "true" ]]; then
-  DB_PATH="$HOME/.config/waiter-pos/waiter-pos-db.json"
-  if [[ -f "$DB_PATH" ]]; then
-    echo "Resetting database at $DB_PATH ..."
-    rm -f "$DB_PATH"
+  USER_DATA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/waiter-pos"
+  if [[ -d "$USER_DATA_DIR" ]]; then
+    echo "Resetting generated app data at $USER_DATA_DIR ..."
+    rm -rf "$USER_DATA_DIR"
   fi
-  echo "Database cleared. App will re-seed on next start."
+  echo "Generated app data cleared. App will re-seed on next start."
 fi
 
 if [ ! -d "node_modules" ]; then

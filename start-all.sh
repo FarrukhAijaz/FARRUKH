@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Starts both the POS desktop app and the Expo waiter-mobile server.
+# This launcher always starts the POS side in fresh mode.
 # Usage:  bash start-all.sh
-#         bash start-all.sh --fresh   (also resets the POS database)
 
 set -e
 
@@ -21,6 +21,7 @@ fi
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  POS System — Starting up"
+echo "  Start Mode : fresh"
 echo "  Local IP  : $LOCAL_IP"
 echo "  POS API   : http://$LOCAL_IP:3000"
 echo "  Expo URL  : exp://$LOCAL_IP:8081"
@@ -30,18 +31,18 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # ── 1. Start POS desktop app (Electron + Express API on :3000) ─────────────────
-echo "▶  Starting POS App (Electron)..."
+echo "▶  Starting POS App (Electron) with fresh data reset..."
 gnome-terminal --title="POS Desktop App" -- bash -c "
   cd \"$ROOT_DIR/POS_App\"
-  bash start.sh $*
+  bash start.sh --fresh
   exec bash
 " 2>/dev/null || \
 xterm -title "POS Desktop App" -e bash -c "
   cd \"$ROOT_DIR/POS_App\"
-  bash start.sh $*
+  bash start.sh --fresh
   exec bash
 " 2>/dev/null || \
-(cd "$ROOT_DIR/POS_App" && bash start.sh "$@" &)
+(cd "$ROOT_DIR/POS_App" && bash start.sh --fresh &)
 
 # Give the Electron app a moment to begin starting
 sleep 2

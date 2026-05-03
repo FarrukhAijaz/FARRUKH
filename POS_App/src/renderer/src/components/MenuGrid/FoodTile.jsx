@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Plus, Minus } from 'lucide-react'
 
 const CATEGORY_COLORS = {
@@ -13,22 +14,49 @@ function FoodTile({ item, qty, onAdd, onRemove }) {
   const colorClass = CATEGORY_COLORS[item.category] || 'bg-cream-200 text-ink-200'
   const hasImage = item.image_path && item.image_path.startsWith('/')
   const isDeal = item.category === 'Shared Journeys'
+  const isOutOfStock = item.in_stock === 0
+  // Always load through Express (port 3000) which serves BOTH seed images and uploaded images.
+  // Cache-bust by hashing the path so the browser refetches when image_path changes.
+  const pathHash = hasImage
+    ? Math.abs(item.image_path.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0))
+        .toString(36).slice(-6)
+    : ''
+  // Use updated_at/created_at as cache-buster when available (changes on every save)
+  const cacheKey = item.updated_at || item.created_at || pathHash
+  const imageSrc = hasImage ? `http://127.0.0.1:3000${item.image_path}?v=${encodeURIComponent(cacheKey)}` : null
+  const [imgError, setImgError] = useState(false)
+
+  useEffect(() => {
+    setImgError(false)
+  }, [item.image_path, item.updated_at])
 
   return (
-    <div className="flex flex-col bg-white rounded-xl border border-cream-300 overflow-hidden hover:border-forest-500 hover:shadow-md transition-all">
+    <div className={`flex flex-col bg-white rounded-xl border border-cream-300 overflow-hidden hover:border-forest-500 hover:shadow-md transition-all ${isOutOfStock ? 'opacity-50' : ''}`}>
       {/* Image or Emoji */}
       <div className="relative w-full h-28 overflow-hidden">
-        {hasImage ? (
-          <img src={item.image_path} alt={item.name} className="w-full h-full object-cover" />
+        {hasImage && !imgError ? (
+          <img
+            src={imageSrc}
+            alt={item.name}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <div className={`flex items-center justify-center text-4xl h-28 w-full ${colorClass}`}>
-            {item.image_path || '🍽️'}
+            {item.image_path && !item.image_path.startsWith('/') ? item.image_path : '🍽️'}
           </div>
         )}
-        {isDeal && (
+        {isDeal && !isOutOfStock && (
           <span className="absolute top-1.5 right-1.5 bg-yellow-400 text-yellow-900 text-[10px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wide shadow">
             DEAL
           </span>
+        )}
+        {isOutOfStock && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <span className="bg-red-600 text-white text-[11px] font-black px-2 py-1 rounded-full shadow-lg">
+              OUT OF STOCK
+            </span>
+          </div>
         )}
       </div>
 
@@ -55,7 +83,7 @@ function FoodTile({ item, qty, onAdd, onRemove }) {
       <div className="flex items-center justify-between px-2 pb-2 pt-1 gap-1">
         <button
           onClick={() => onRemove(item)}
-          disabled={qty === 0}
+          disabled={qty === 0 || isOutOfStock}
           className="flex-1 flex items-center justify-center h-9 rounded-lg bg-cream-200 hover:bg-red-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <Minus size={16} className="text-ink-200" />
@@ -66,8 +94,9 @@ function FoodTile({ item, qty, onAdd, onRemove }) {
         </span>
 
         <button
-          onClick={() => onAdd(item)}
-          className="flex-1 flex items-center justify-center h-9 rounded-lg bg-cream-200 hover:bg-forest-500/20 transition-colors"
+          onClick={() => !isOutOfStock && onAdd(item)}
+          disabled={isOutOfStock}
+          className="flex-1 flex items-center justify-center h-9 rounded-lg bg-cream-200 hover:bg-forest-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <Plus size={16} className="text-ink-200" />
         </button>
