@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { X, Wifi, Smartphone, Copy, Check, RefreshCw, AlertCircle } from 'lucide-react'
+import { X, Wifi, Smartphone, Copy, Check, RefreshCw, AlertCircle, ChevronDown, ChevronUp, Terminal } from 'lucide-react'
 import QRCode from 'qrcode'
 
 const EXPO_PORT = 8081
@@ -27,6 +27,10 @@ export default function WaiterConnectModal({ onClose }) {
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
   const [metro, setMetro] = useState({ status: 'stopped', error: null })
+  const [showLogs, setShowLogs] = useState(false)
+  const [logs, setLogs] = useState('')
+  const [logsCopied, setLogsCopied] = useState(false)
+  const logsEndRef = useRef(null)
   const canvasRef = useRef(null)
   const pollRef = useRef(null)
 
@@ -73,6 +77,22 @@ export default function WaiterConnectModal({ onClose }) {
     return () => clearInterval(pollRef.current)
   }, [fetchUrls])
 
+  // Poll logs every 2s when the panel is open
+  useEffect(() => {
+    if (!showLogs) return
+    const fetchLogs = async () => {
+      try {
+        const text = await window.api.metro.getLogs()
+        setLogs(text || '')
+        // Auto-scroll to bottom
+        setTimeout(() => logsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 30)
+      } catch {}
+    }
+    fetchLogs()
+    const id = setInterval(fetchLogs, 2000)
+    return () => clearInterval(id)
+  }, [showLogs])
+
   useEffect(() => { fetchUrls() }, [fetchUrls])
 
   useEffect(() => {
@@ -88,6 +108,14 @@ export default function WaiterConnectModal({ onClose }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch { /* not available */ }
+  }
+
+  const handleCopyLogs = async () => {
+    try {
+      await navigator.clipboard.writeText(logs)
+      setLogsCopied(true)
+      setTimeout(() => setLogsCopied(false), 2000)
+    } catch {}
   }
 
   const handleRestart = async () => {
@@ -242,6 +270,66 @@ export default function WaiterConnectModal({ onClose }) {
             </div>
           )}
         </div>
+
+        {/* ── Live Logs panel ─────────────────────────────────────────── */}
+        <div className="border-t border-cream-300">
+          {/* Toggle header */}
+          <button
+            onClick={() => setShowLogs((v) => !v)}
+            className="w-full flex items-center justify-between px-6 py-3 hover:bg-cream-200/60 transition-colors"
+          >
+            <span className="flex items-center gap-2 text-xs font-semibold text-ink-200">
+              <Terminal size={13} />
+              Metro Logs
+              {metro.status === 'error' && (
+                <span className="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">ERROR</span>
+              )}
+            </span>
+            {showLogs ? <ChevronUp size={14} className="text-ink-200/60" /> : <ChevronDown size={14} className="text-ink-200/60" />}
+          </button>
+
+          {showLogs && (
+            <div className="px-4 pb-4">
+              {/* Toolbar */}
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] text-ink-200/50 font-mono">
+                  ~/.config/farrukh/metro-debug.log
+                </span>
+                <button
+                  onClick={handleCopyLogs}
+                  className="flex items-center gap-1 text-[10px] text-ink-200 hover:text-ink-300 font-medium transition-colors"
+                >
+                  {logsCopied ? <Check size={11} className="text-forest-500" /> : <Copy size={11} />}
+                  {logsCopied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+
+              {/* Terminal box */}
+              <div className="bg-[#0d1117] rounded-lg p-3 h-44 overflow-y-auto font-mono text-[10px] leading-relaxed">
+                {logs ? (
+                  logs.split('\n').map((line, i) => {
+                    const isStderr = line.includes('[stderr]')
+                    const isError  = /error|Error|Cannot|failed|Failed/i.test(line) && !line.includes('[stdout]')
+                    const color = isError || isStderr
+                      ? 'text-amber-400'
+                      : line.includes('[Metro]') && /error|Error/i.test(line)
+                      ? 'text-red-400'
+                      : 'text-gray-300'
+                    return (
+                      <div key={i} className={color + ' whitespace-pre-wrap break-all'}>
+                        {line}
+                      </div>
+                    )
+                  })
+                ) : (
+                  <span className="text-gray-500">No logs yet — logs appear once Metro starts.</span>
+                )}
+                <div ref={logsEndRef} />
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   )

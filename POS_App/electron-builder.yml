@@ -12,8 +12,9 @@ files:
 asarUnpack:
   - resources/**
   - "**/*.node"
-# Copy seed menu images into resources/ so they're available outside the asar
-# Also copy waiter-mobile source (no node_modules) so Metro can start automatically
+afterPack: ./after-pack.js
+# Bundle waiter-mobile WITH pre-installed node_modules so Metro starts immediately
+# (node_modules are injected by the afterPack hook — electron-builder strips them from extraResources)
 extraResources:
   - from: src/renderer/public
     to: public
@@ -28,6 +29,7 @@ extraResources:
       - "!android/**"
       - "!ios/**"
       - "!.git/**"
+      - "!*.tgz"
 win:
   icon: resources/icon.png
   executableName: FARRUKH
@@ -59,6 +61,6 @@ linux:
 appImage:
   artifactName: FARRUKH-${version}.${ext}
 deb:
-  artifactName: WaiterPOS-${version}.${ext}
+  artifactName: FARRUKH-${version}.${ext}
 npmRebuild: false
 publish: null

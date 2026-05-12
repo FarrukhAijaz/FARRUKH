@@ -77,6 +77,7 @@ const api = {
   },
   metro: {
     getStatus: () => ipcRenderer.invoke('metro:getStatus'),
+    getLogs: () => ipcRenderer.invoke('metro:getLogs'),
     restart: () => ipcRenderer.invoke('metro:restart')
   }
 }

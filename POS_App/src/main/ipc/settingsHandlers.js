@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { createHash, timingSafeEqual } from 'crypto'
 import { getDatabase } from '../db/index.js'
 import { getServerUrls } from '../services/networkService.js'
-import { getMetroStatus, startMetro } from '../services/metroService.js'
+import { getMetroStatus, getMetroLogs, startMetro } from '../services/metroService.js'
 
 function hashPin(pin) {
   return createHash('sha256').update(String(pin)).digest('hex')
@@ -66,6 +66,10 @@ function registerSettingsHandlers() {
 
   ipcMain.handle('metro:getStatus', () => {
     return getMetroStatus()
+  })
+
+  ipcMain.handle('metro:getLogs', () => {
+    return getMetroLogs(150)
   })
 
   ipcMain.handle('metro:restart', async () => {

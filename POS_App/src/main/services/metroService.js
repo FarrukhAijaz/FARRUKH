@@ -6,23 +6,44 @@
  *
  * Flow:
  *  1. On app start → startMetro()
- *  2. In production: source is bundled into resources/waiter-mobile (no node_modules)
- *     → copy to userData on first run (userData is always writable, even on AppImage)
- *     → run `npm install` once
+ *  2. In production: waiter-mobile is bundled COMPLETE with node_modules in resources/
+ *     → copy to userData on first run, or when version changes (userData is writable)
+ *     → NO npm install at runtime — everything is already installed
  *  3. Spawn `npx expo start --lan --port 8081`
  *  4. Poll port 8081 to detect when Metro is ready
  *  5. stopMetro() called on app quit
  */
 
 import { spawn } from 'child_process'
-import { cpSync, existsSync, readFileSync } from 'fs'
+import { cpSync, existsSync, readFileSync, appendFileSync } from 'fs'
 import { join } from 'path'
 import { createConnection } from 'net'
 import { app } from 'electron'
 import { is } from '@electron-toolkit/utils'
 
+// ── File logger ───────────────────────────────────────────────────────────────
+let _logPath = null
+function getLogPath() {
+  if (!_logPath) _logPath = join(app.getPath('userData'), 'metro-debug.log')
+  return _logPath
+}
+
+function log(...args) {
+  const line = `[${new Date().toISOString()}] [Metro] ${args.join(' ')}`
+  console.log(line)
+  try { appendFileSync(getLogPath(), line + '\n') } catch { /* non-fatal */ }
+}
+
+/** Read last N lines of the log — called via IPC from the renderer */
+export function getMetroLogs(lines = 150) {
+  try {
+    const content = readFileSync(getLogPath(), 'utf8')
+    return content.split('\n').filter(Boolean).slice(-lines).join('\n')
+  } catch { return '' }
+}
+
 let metroProcess = null
-let _status = 'stopped'   // 'stopped' | 'installing' | 'starting' | 'running' | 'error'
+let _status = 'stopped'   // 'stopped' | 'starting' | 'running' | 'error'
 let _error = null
 let _poller = null
 
@@ -33,25 +54,29 @@ export function getMetroStatus() {
 }
 
 export async function startMetro() {
-  if (['running', 'starting', 'installing'].includes(_status)) return
+  if (['running', 'starting'].includes(_status)) return
 
-  // Already something on port 8081? (user ran `npm start` manually)
+  log(`startMetro called | is.dev=${is.dev} | status=${_status}`)
+
+  // Already something on port 8081?
   if (await checkPort()) {
-    console.log('[Metro] Port 8081 already in use – marking as running')
-    _status = 'running'
-    _error = null
-    return
+    if (metroProcess) {
+      log('Already running (our process)')
+      _status = 'running'
+      _error = null
+      return
+    }
+    // Stale/zombie Metro from a previous crashed run – kill it and start fresh
+    log('Stale process on port 8081 detected – killing it…')
+    await killPort8081()
+    await new Promise((r) => setTimeout(r, 800))
   }
 
   const waiterDir = await resolveWaiterDir()
   if (!waiterDir) return  // error already set inside resolveWaiterDir
 
-  const nodeModulesExist = existsSync(join(waiterDir, 'node_modules'))
-  if (nodeModulesExist) {
-    spawnMetro(waiterDir)
-  } else {
-    runNpmInstall(waiterDir)
-  }
+  log(`Starting Metro in: ${waiterDir}`)
+  spawnMetro(waiterDir)
 }
 
 export function stopMetro() {
@@ -62,9 +87,31 @@ export function stopMetro() {
     try { metroProcess.kill('SIGTERM') } catch {}
     metroProcess = null
   }
+  // Best-effort: also kill anything still on the port (handles edge cases)
+  killPort8081().catch(() => {})
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Kill whatever process is listening on port 8081.
+ * Works on Linux/macOS (lsof) and Windows (netstat + taskkill).
+ */
+function killPort8081() {
+  return new Promise((resolve) => {
+    const cmd = process.platform === 'win32'
+      ? `for /f "tokens=5" %a in ('netstat -aon ^| findstr ":8081 "') do @taskkill /F /PID %a`
+      : `lsof -ti tcp:8081 2>/dev/null | xargs -r kill -9`
+    const killer = spawn(
+      process.platform === 'win32' ? 'cmd' : 'sh',
+      [process.platform === 'win32' ? '/c' : '-c', cmd],
+      { stdio: 'pipe', shell: false }
+    )
+    killer.on('close', () => resolve())
+    killer.on('error', () => resolve())
+    setTimeout(resolve, 3000) // hard timeout – don't block startup
+  })
+}
 
 function checkPort() {
   return new Promise((resolve) => {
@@ -80,9 +127,9 @@ function clearPoller() {
 }
 
 /**
- * In dev  → use the sibling waiter-mobile folder directly (already writable)
- * In prod → copy from resources/waiter-mobile (read-only inside AppImage)
- *           to userData/waiter-mobile (always writable)
+ * In dev  → use the sibling waiter-mobile folder directly (already writable + has node_modules)
+ * In prod → copy from resources/waiter-mobile (bundled with node_modules, but read-only in AppImage)
+ *           to userData/waiter-mobile (always writable) — only when version changes
  */
 async function resolveWaiterDir() {
   if (is.dev) {
@@ -90,54 +137,53 @@ async function resolveWaiterDir() {
     if (!existsSync(devDir)) {
       _status = 'error'
       _error = 'waiter-mobile directory not found beside POS_App'
+      log(_error)
       return null
     }
+    log(`dev mode: using ${devDir}`)
     return devDir
   }
 
   // Production path
-  const srcDir  = join(process.resourcesPath, 'waiter-mobile')
-  const runDir  = join(app.getPath('userData'), 'waiter-mobile')
+  const srcDir = join(process.resourcesPath, 'waiter-mobile')
+  const runDir = join(app.getPath('userData'), 'waiter-mobile')
 
   if (!existsSync(srcDir)) {
     _status = 'error'
     _error = 'waiter-mobile not bundled (rebuild the POS app)'
+    log(_error)
     return null
   }
 
-  // Check if we need to copy (first install, version bump, or missing required files)
+  log(`srcDir=${srcDir}`)
+  log(`runDir=${runDir}`)
+
+  // Determine if a copy is needed
   let needsCopy = !existsSync(join(runDir, 'package.json'))
   if (!needsCopy) {
     try {
       const srcVer = JSON.parse(readFileSync(join(srcDir, 'package.json'), 'utf8')).version
       const runVer = JSON.parse(readFileSync(join(runDir, 'package.json'), 'utf8')).version
+      log(`srcVer=${srcVer} runVer=${runVer}`)
       needsCopy = srcVer !== runVer
-    } catch { needsCopy = true }
+    } catch (e) { log(`version check error: ${e.message}`); needsCopy = true }
   }
-  // Also re-copy if key config files are missing (stale copy from before they were added)
-  if (!needsCopy) {
-    const requiredFiles = ['metro.config.js', 'global.css', 'tailwind.config.js']
-    needsCopy = requiredFiles.some((f) => !existsSync(join(runDir, f)))
-    if (needsCopy) console.log('[Metro] Stale userData copy detected — re-copying...')
+  // Also re-copy if node_modules is missing from the run dir
+  if (!needsCopy && !existsSync(join(runDir, 'node_modules'))) {
+    log('node_modules missing from runDir — will re-copy')
+    needsCopy = true
   }
 
   if (needsCopy) {
-    console.log('[Metro] Copying waiter-mobile to userData...')
+    log('Copying waiter-mobile (with node_modules) to userData…')
+    _status = 'starting'
     try {
-      const keepModules = existsSync(join(runDir, 'node_modules'))
-      cpSync(srcDir, runDir, {
-        recursive: true,
-        force: true,
-        filter: (src) => {
-          // Don't overwrite existing node_modules if present (saves re-install time)
-          if (src.includes('node_modules')) return !keepModules
-          return true
-        }
-      })
-      console.log('[Metro] Copy done → ', runDir)
+      cpSync(srcDir, runDir, { recursive: true, force: true })
+      log(`Copy done → ${runDir}`)
     } catch (err) {
       _status = 'error'
       _error = `Failed to copy waiter-mobile: ${err.message}`
+      log(_error)
       return null
     }
   }
@@ -145,42 +191,10 @@ async function resolveWaiterDir() {
   return runDir
 }
 
-function runNpmInstall(waiterDir) {
-  _status = 'installing'
-  _error = null
-  console.log('[Metro] npm install in:', waiterDir)
-
-  const installer = spawn('npm', ['install', '--legacy-peer-deps'], {
-    cwd: waiterDir,
-    shell: true,
-    stdio: 'pipe'
-  })
-
-  installer.stdout?.on('data', (d) => process.stdout.write('[npm] ' + d))
-  installer.stderr?.on('data', (d) => process.stderr.write('[npm] ' + d))
-
-  installer.on('error', (err) => {
-    _status = 'error'
-    _error = err.code === 'ENOENT'
-      ? 'Node.js / npm not found — please install Node.js LTS'
-      : `npm error: ${err.message}`
-    console.error('[Metro]', _error)
-  })
-
-  installer.on('close', (code) => {
-    if (code !== 0) {
-      _status = 'error'
-      _error = `npm install failed (exit ${code}). Check your internet connection.`
-      return
-    }
-    spawnMetro(waiterDir)
-  })
-}
-
 function spawnMetro(waiterDir) {
   _status = 'starting'
   _error = null
-  console.log('[Metro] Starting Expo Metro bundler in:', waiterDir)
+  log(`Starting Expo Metro bundler in: ${waiterDir}`)
 
   const stderrLines = []
 
@@ -194,6 +208,10 @@ function spawnMetro(waiterDir) {
   metroProcess.stdout?.on('data', (data) => {
     const text = data.toString()
     process.stdout.write('[Metro] ' + text)
+    // Write to log file so the UI can stream it
+    text.split('\n').filter(Boolean).forEach((line) => {
+      try { appendFileSync(getLogPath(), `[${new Date().toISOString()}] [stdout] ${line}\n`) } catch {}
+    })
     // Some expo versions print "Metro waiting" or "Bundler is running"
     if (/Metro waiting|Bundler is running|Starting Metro|exp:\/\//.test(text)) {
       _status = 'running'
@@ -204,6 +222,10 @@ function spawnMetro(waiterDir) {
   metroProcess.stderr?.on('data', (data) => {
     const text = data.toString()
     process.stderr.write('[Metro] ' + text)
+    // Write to log file so the UI can stream it
+    text.split('\n').filter(Boolean).forEach((line) => {
+      try { appendFileSync(getLogPath(), `[${new Date().toISOString()}] [stderr] ${line}\n`) } catch {}
+    })
     // Keep last 8 lines of stderr so we can show the real error in the UI
     stderrLines.push(...text.split('\n').filter(Boolean))
     if (stderrLines.length > 8) stderrLines.splice(0, stderrLines.length - 8)
@@ -215,6 +237,7 @@ function spawnMetro(waiterDir) {
       ? 'npx not found — please install Node.js LTS'
       : err.message
     console.error('[Metro] process error:', _error)
+    log(`Metro process error: ${_error}`)
   })
 
   metroProcess.on('close', (code) => {
