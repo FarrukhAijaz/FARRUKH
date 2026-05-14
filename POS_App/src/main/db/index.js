@@ -30,9 +30,9 @@ function getDatabase() {
       device_enrollments: [],
       attendance_audit: [],
       settings: {
-        printer_mock: 'true',
-        printer_type: 'network',
-        printer_interface: '192.168.1.100:9100',
+        printer_mock: 'false',
+        printer_type: 'usb',
+        printer_interface: 'POS-80',
         ...DEFAULT_ATTENDANCE_SETTINGS
       },
       _counters: {
@@ -52,6 +52,17 @@ function getDatabase() {
       ...DEFAULT_ATTENDANCE_SETTINGS,
       ...currentSettings
     }).write()
+
+    // Migrate printer settings: if still at old network defaults, switch to USB
+    {
+      const s = db.get('settings').value()
+      if (s.printer_interface === '192.168.1.100:9100' || s.printer_mock === 'true') {
+        db.set('settings.printer_mock', 'false').write()
+        db.set('settings.printer_type', 'usb').write()
+        db.set('settings.printer_interface', 'POS-80').write()
+        console.log('[DB] Migrated printer settings → USB/CUPS POS-80')
+      }
+    }
 
     const currentCounters = db.get('_counters').value() || {}
     db.set('_counters', {

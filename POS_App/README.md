@@ -89,15 +89,47 @@ To reset the database (re-seed tables and menu), delete that file and restart th
 
 By default the app runs in **mock mode** — every Punch and Interim Bill prints a formatted receipt to the terminal console. No hardware needed.
 
-To connect a real thermal printer, edit the settings in the database file or expose a Settings screen:
+To connect a real thermal printer, update the settings keys in the database file (or via a Settings screen):
 
-| Key | Default | Description |
-|---|---|---|
-| `printer_mock` | `true` | Set to `false` to use real printer |
-| `printer_type` | `network` | `network` (TCP/IP) or `usb` |
-| `printer_interface` | `192.168.1.100:9100` | IP:port for network, or `/dev/usb/lp0` for USB |
+| Key | Description |
+|---|---|
+| `printer_mock` | `"false"` to use real hardware, `"true"` for console-only mock |
+| `printer_type` | `"usb"` (CUPS) or `"network"` (TCP/IP) |
+| `printer_interface` | CUPS printer name for USB, or `IP:port` for network |
 
 Supported printer protocol: **EPSON ESC/POS** (most thermal printers).
+
+---
+
+### Hardware — Xprinter Units
+
+Two Xprinter thermal printers are in use for this deployment.
+
+#### Printer 1 — Kitchen (currently USB)
+
+| Property | Value |
+|---|---|
+| **Connection** | USB → CUPS queue `POS-80` |
+| **CUPS name** | `POS-80` |
+| **Config** | `printer_type: "usb"`, `printer_interface: "POS-80"` |
+
+When switched to Ethernet, use the network config below instead.
+
+#### Printer 2 — Bill / Counter (network, planned)
+
+| Property | Value |
+|---|---|
+| **IP Address** | `192.168.123.100` |
+| **MAC Address** | `00:61:AF:67:46:B8` |
+| **Gateway** | `192.168.123.1` |
+| **Subnet Mask** | `255.255.255.0` |
+| **DHCP** | Disabled (static IP) |
+| **Protocol** | TCP/IP — port `9100` |
+| **Config** | `printer_type: "network"`, `printer_interface: "192.168.123.100:9100"` |
+
+#### Network subnet note
+
+Both printers will be on the `192.168.123.0/24` subnet. Ensure the POS PC has an interface on this subnet (e.g. `192.168.123.x`) when switching to network mode, otherwise the TCP connection will be refused.
 
 ---
 

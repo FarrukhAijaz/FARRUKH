@@ -1,3 +1,5 @@
+import { spawn } from 'child_process'
+
 const SPICE_TEXT = { 1: 'Mild', 2: 'Medium', 3: 'Hot!!!' }
 
 function formatModifierText(m) {
@@ -128,43 +130,138 @@ const formatBillReceipt = (payload) => {
   return lines.join('\n')
 }
 
+// Pipe a raw ESC/POS buffer to a CUPS printer by name
+function printViaCups(buffer, printerName) {
+  return new Promise((resolve, reject) => {
+    const lp = spawn('lp', ['-d', printerName, '-o', 'raw', '-'])
+    lp.on('error', (err) => reject(new Error(`lp spawn error: ${err.message}`)))
+    lp.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(`lp exited with code ${code}`))
+    })
+    lp.stdin.write(buffer)
+    lp.stdin.end()
+  })
+}
+
+// Send a raw ESC/POS buffer over TCP to network:port
+function printViaNetwork(buffer, interfaceStr) {
+  const [host, portStr] = interfaceStr.split(':')
+  const port = parseInt(portStr, 10) || 9100
+  return new Promise((resolve, reject) => {
+    const net = require('net')
+    const socket = net.createConnection({ host, port, timeout: 5000 }, () => {
+      socket.write(buffer, () => {
+        socket.end()
+        resolve()
+      })
+    })
+    socket.on('error', reject)
+    socket.on('timeout', () => {
+      socket.destroy()
+      reject(new Error(`Connection to ${interfaceStr} timed out`))
+    })
+  })
+}
+
+async function buildKitchenBuffer(payload) {
+  const { ThermalPrinter, PrinterTypes, CharacterSet } = await import('node-thermal-printer')
+  const printer = new ThermalPrinter({
+    type: PrinterTypes.EPSON,
+    interface: '/tmp/thermal-dummy',
+    characterSet: CharacterSet.PC852_LATIN2,
+    removeSpecialCharacters: false,
+    lineCharacter: '-'
+  })
+  printer.alignCenter()
+  printer.bold(true)
+  printer.println(`KITCHEN ORDER -- ${payload.table}`)
+  printer.bold(false)
+  printer.println(`Order #${payload.orderId}`)
+  printer.println(`Time: ${payload.timestamp}`)
+  printer.drawLine()
+  for (const item of payload.items) {
+    printer.alignLeft()
+    if (item.cancelled) {
+      printer.println(`  [VOID] ${item.qty}x  ${item.name}`)
+    } else {
+      printer.println(`  ${item.qty}x  ${item.name}${item.notes ? `  [${item.notes}]` : ''}`)
+      if (item.deal_items) {
+        for (const di of item.deal_items) {
+          printer.println(`       - ${di.qty}x ${di.name}`)
+        }
+      }
+      if (item.modifiers && item.modifiers.length > 0) {
+        const grouped = groupModifiersText(item.modifiers)
+        for (const { label, count } of grouped) {
+          printer.println(`       ~ ${count > 1 ? count + 'x ' : ''}${label}`)
+        }
+      }
+    }
+  }
+  printer.drawLine()
+  if (payload.specialInstructions) printer.println(`Notes: ${payload.specialInstructions}`)
+  printer.cut()
+  return printer.getBuffer()
+}
+
+async function buildBillBuffer(payload) {
+  const { ThermalPrinter, PrinterTypes, CharacterSet } = await import('node-thermal-printer')
+  const printer = new ThermalPrinter({
+    type: PrinterTypes.EPSON,
+    interface: '/tmp/thermal-dummy',
+    characterSet: CharacterSet.PC852_LATIN2,
+    removeSpecialCharacters: false,
+    lineCharacter: '-'
+  })
+  printer.alignCenter()
+  printer.bold(true)
+  printer.println('FARRUKH RESTAURANT')
+  printer.bold(false)
+  printer.println(`INTERIM BILL -- ${payload.table}`)
+  printer.drawLine()
+  printer.alignLeft()
+  printer.println(`Order #${payload.orderId}`)
+  printer.println(`Time: ${payload.timestamp}`)
+  printer.drawLine()
+  for (const item of payload.items) {
+    printer.tableCustom([
+      { text: `${item.qty}x ${item.name}`, align: 'LEFT', width: 0.75 },
+      { text: `Rs ${item.subtotal.toFixed(0)}`, align: 'RIGHT', width: 0.25 }
+    ])
+  }
+  printer.drawLine()
+  printer.bold(true)
+  printer.tableCustom([
+    { text: 'TOTAL', align: 'LEFT', width: 0.5 },
+    { text: `Rs ${payload.totalAmount.toFixed(0)}`, align: 'RIGHT', width: 0.5 }
+  ])
+  printer.bold(false)
+  if (payload.specialInstructions) {
+    printer.drawLine()
+    printer.println(`Notes: ${payload.specialInstructions}`)
+  }
+  printer.cut()
+  return printer.getBuffer()
+}
+
 export const printKitchenReceipt = async (order, table, config) => {
   const payload = buildKitchenPayload(order, table)
 
   if (config.mock === true || config.mock === 'true') {
     console.log('\n[MOCK PRINTER] Kitchen Receipt')
     console.log(formatKitchenReceipt(payload))
-    console.log('[MOCK PRINTER] Raw payload:', JSON.stringify(payload, null, 2))
     return { success: true, mock: true, payload }
   }
 
   try {
-    const { ThermalPrinter, PrinterTypes, CharacterSet } = await import('node-thermal-printer')
-    const printer = new ThermalPrinter({
-      type: PrinterTypes.EPSON,
-      interface: config.interface,
-      characterSet: CharacterSet.PC852_LATIN2,
-      removeSpecialCharacters: false,
-      lineCharacter: '-',
-      options: { timeout: 5000 }
-    })
-    const isConnected = await printer.isPrinterConnected()
-    if (!isConnected) throw new Error('Printer not reachable at ' + config.interface)
-    printer.alignCenter()
-    printer.bold(true)
-    printer.println(`KITCHEN ORDER -- ${payload.table}`)
-    printer.bold(false)
-    printer.println(`Order #${payload.orderId}`)
-    printer.println(`Time: ${payload.timestamp}`)
-    printer.drawLine()
-    for (const item of payload.items) {
-      printer.alignLeft()
-      printer.println(`${item.qty}x  ${item.name}${item.notes ? `  [${item.notes}]` : ''}`)
+    const buffer = await buildKitchenBuffer(payload)
+    if (config.type === 'usb') {
+      await printViaCups(buffer, config.interface)
+    } else {
+      await printViaNetwork(buffer, config.interface)
     }
-    printer.drawLine()
-    if (payload.specialInstructions) printer.println(`Notes: ${payload.specialInstructions}`)
-    printer.cut()
-    await printer.execute()
+    console.log(`[PRINTER] Kitchen receipt sent (${config.type}) → ${config.interface}`)
     return { success: true, mock: false }
   } catch (err) {
     console.error('[PRINTER ERROR]', err.message)
@@ -178,42 +275,17 @@ export const printInterimBill = async (order, table, config) => {
   if (config.mock === true || config.mock === 'true') {
     console.log('\n[MOCK PRINTER] Interim Bill')
     console.log(formatBillReceipt(payload))
-    console.log('[MOCK PRINTER] Raw payload:', JSON.stringify(payload, null, 2))
     return { success: true, mock: true, payload }
   }
 
   try {
-    const { ThermalPrinter, PrinterTypes, CharacterSet } = await import('node-thermal-printer')
-    const printer = new ThermalPrinter({
-      type: PrinterTypes.EPSON,
-      interface: config.interface,
-      characterSet: CharacterSet.PC852_LATIN2,
-      removeSpecialCharacters: false,
-      options: { timeout: 5000 }
-    })
-    const isConnected = await printer.isPrinterConnected()
-    if (!isConnected) throw new Error('Printer not reachable at ' + config.interface)
-    printer.alignCenter()
-    printer.bold(true)
-    printer.println(`INTERIM BILL -- ${payload.table}`)
-    printer.bold(false)
-    printer.println(`Order #${payload.orderId}`)
-    printer.println(`Time: ${payload.timestamp}`)
-    printer.drawLine()
-    for (const item of payload.items) {
-      printer.alignLeft()
-      printer.tableCustom([
-        { text: `${item.qty}x ${item.name}`, align: 'LEFT', width: 0.75 },
-        { text: `₺${item.subtotal.toFixed(2)}`, align: 'RIGHT', width: 0.25 }
-      ])
+    const buffer = await buildBillBuffer(payload)
+    if (config.type === 'usb') {
+      await printViaCups(buffer, config.interface)
+    } else {
+      await printViaNetwork(buffer, config.interface)
     }
-    printer.drawLine()
-    printer.bold(true)
-    printer.alignRight()
-    printer.println(`TOTAL: ₺${payload.totalAmount.toFixed(2)}`)
-    printer.bold(false)
-    printer.cut()
-    await printer.execute()
+    console.log(`[PRINTER] Bill sent (${config.type}) → ${config.interface}`)
     return { success: true, mock: false }
   } catch (err) {
     console.error('[PRINTER ERROR]', err.message)
