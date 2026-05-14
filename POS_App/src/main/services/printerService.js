@@ -227,14 +227,14 @@ async function buildBillBuffer(payload) {
   for (const item of payload.items) {
     printer.tableCustom([
       { text: `${item.qty}x ${item.name}`, align: 'LEFT', width: 0.75 },
-      { text: `Rs ${item.subtotal.toFixed(0)}`, align: 'RIGHT', width: 0.25 }
+      { text: `TRY ${item.subtotal.toFixed(0)}`, align: 'RIGHT', width: 0.25 }
     ])
   }
   printer.drawLine()
   printer.bold(true)
   printer.tableCustom([
     { text: 'TOTAL', align: 'LEFT', width: 0.5 },
-    { text: `Rs ${payload.totalAmount.toFixed(0)}`, align: 'RIGHT', width: 0.5 }
+    { text: `TRY ${payload.totalAmount.toFixed(0)}`, align: 'RIGHT', width: 0.5 }
   ])
   printer.bold(false)
   if (payload.specialInstructions) {
